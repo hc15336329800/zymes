@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.item.mapper.MidItemStockMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, item_no, procedure_code, procedure_name, seq_no, initial_count, report_count, report_used, out_store_used,
+        report_less_count, alloc_used, last_flag, updated_by, updated_time, created_by, created_time
+    </sql>
+
+    <select id="pageInfo" resultType="cn.jb.boot.biz.item.vo.response.MidItemStockPageResponse"
+            parameterType="cn.jb.boot.biz.item.vo.request.MidItemStockPageRequest">
+        select tmis.procedure_code ,tmis.procedure_name ,tmis.item_no ,tmis.seq_no,
+        tmis.initial_count + tmis.report_count-tmis.report_used-tmis.out_store_used-tmis.alloc_used as item_count
+        from t_mid_item_stock tmis
+        <where>
+            <if test="p.itemNo != null and p.itemNo != ''">
+                and tmis.item_no =#{p.itemNo}
+            </if>
+            <if test="p.procedureName != null and p.procedureName != ''">
+                and tmis.procedure_name =#{p.procedureName}
+            </if>
+        </where>
+        order by tmis.seq_no
+    </select>
+    <select id="getMissingMid" resultType="cn.jb.boot.biz.item.entity.MesProcedure">
+
+        SELECT
+        a.*
+        FROM
+        mes_procedure a
+        LEFT JOIN t_mid_item_stock b ON a.item_no=b.item_no and a.procedure_code=b.procedure_code
+        WHERE b.id IS NULL
+
+
+    </select>
+    <select id="selectStock" resultType="cn.jb.boot.biz.item.entity.MidItemStock">
+        select * from t_mid_item_stock t1 where last_flag='01'
+        <if test="itemNos !=null">
+            and t1.item_no in
+            <foreach collection="itemNos" item="itemNo" separator="," open="(" close=")">
+                #{itemNo}
+            </foreach>
+        </if>
+
+
+    </select>
+</mapper>

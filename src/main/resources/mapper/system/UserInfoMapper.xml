@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.system.mapper.UserInfoMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, dept_id, user_name, nick_name, mobile, data_status, updated_by, updated_time, created_by, created_time
+    </sql>
+
+
+    <select id="userInfoPage" resultType="cn.jb.boot.system.vo.request.UserInfoPageResponse"
+            parameterType="cn.jb.boot.system.vo.request.UserInfoPageRequest">
+        SELECT sui.id, sui.dept_id, sui.user_name, sui.nick_name, sui.mobile, sui.data_status,
+        sui.updated_by, sui.updated_time, sui.created_by,
+        sui. created_time,sdi.dept_name,
+        (select group_concat(ur.role_name) from sys_user_role ur where ur.user_id = sui.id ) role_name_str
+        from sys_user_info sui inner join sys_dept_info sdi on sdi.id=sui.dept_id
+
+        <where>
+            <if test="p.mobile != null and p.mobile != ''">
+                AND sui.mobile like concat('%', #{p.mobile}, '%')
+            </if>
+            <if test="p.dataStatus != null and p.dataStatus != ''">
+                AND sui.data_status = #{p.dataStatus}
+            </if>
+            <if test="p.nickName != null and p.nickName != ''">
+                AND sui.nick_name like concat('%', #{p.nickName}, '%')
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and sui.created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),
+                '%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and sui.created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),
+                '%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test="p.deptIds != null and p.deptIds.size()>0 ">
+                and dept_id in
+                <foreach collection="p.deptIds" item="item" index="index" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+        order by sui.created_time desc
+
+    </select>
+
+    <select id="getCache" resultType="cn.jb.boot.system.vo.DictDataVo">
+        select id dict_value, nick_name dict_label,1 dictSort
+        from sys_user_info sui
+
+    </select>
+    <select id="outerUserSelected" resultType="cn.jb.boot.system.vo.response.DictListResponse">
+
+        select sui.id code, sui.nick_name name
+        from sys_user_info sui inner join sys_user_role sur on sur.user_id=sui.id
+        where sur.role_code='JS000000004'
+
+
+    </select>
+</mapper>

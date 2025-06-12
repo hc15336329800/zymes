@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.sales.mapper.DeliveryRecordMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, delivery_id, item_no, cust_name, send_count, send_time, send_acct_no, send_acct_name, updated_by,
+        updated_time, created_by, created_time
+    </sql>
+
+    <sql id="listPageSql">
+        select dr.send_acct_name,dr.send_time,dr.item_no,dr.cust_name,dr.send_count
+        from t_delivery_record dr
+        <where>
+            <if test='p.itemNo != null and p.itemNo !=""'>
+                AND dr.item_no =#{p.itemNo}
+            </if>
+            <if test='p.custName != null and p.custName !=""'>
+                AND dr.cust_name like concat("%",#{p.custName},"%")
+            </if>
+            <if test='p.sendAcctName != null and p.sendAcctName !=""'>
+                AND dr.send_acct_name like concat("%",#{p.sendAcctName},"%")
+            </if>
+            <if test='p.startDate != null and p.startDate !=""'>
+                and dr.send_time &gt;= STR_TO_DATE(concat(#{p.startDate}, ' 00:00:00'),'%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test='p.endDate != null and p.endDate !=""'>
+                and dr.send_time &lt;= STR_TO_DATE(concat(#{p.endDate}, ' 23:59:59'),'%Y-%m-%d %H:%i:%s')
+            </if>
+        </where>
+        order by dr.created_by desc
+    </sql>
+
+    <resultMap id="staMap" type="cn.jb.boot.biz.sales.model.DeliveryRecordSta">
+        <result property="itemNo" column="item_no"/>
+        <collection property="list" ofType="cn.jb.boot.biz.sales.model.DeliveryRecordStaSusb">
+            <result property="mm" column="mm"/>
+            <result property="counts" column="counts"/>
+        </collection>
+    </resultMap>
+
+    <select id="sta" resultMap="staMap">
+        select dr.item_no, DATE_FORMAT(dr.send_time,'%d') mm, SUM(dr.send_count) counts
+        from t_delivery_record dr
+        where DATE_FORMAT(dr.send_time,'%Y-%m') = #{ym}
+        GROUP BY dr.item_no,DATE_FORMAT(dr.send_time,'%d')
+        order by dr.item_no, DATE_FORMAT(dr.send_time,'%d')
+    </select>
+
+    <select id="deliveryRecordPage" resultType="cn.jb.boot.biz.sales.vo.response.DeliveryRecordPageRep"
+            parameterType="cn.jb.boot.biz.sales.vo.request.DeliveryRecordPageReq">
+        <include refid="listPageSql"/>
+    </select>
+
+    <select id="deliveryRecordList" resultType="cn.jb.boot.biz.sales.vo.response.DeliveryRecordPageRep"
+            parameterType="cn.jb.boot.biz.sales.vo.request.DeliveryRecordPageReq">
+        <include refid="listPageSql"/>
+    </select>
+</mapper>

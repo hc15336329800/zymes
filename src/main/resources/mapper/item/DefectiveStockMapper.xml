@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.item.mapper.DefectiveStockMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, item_no, item_count, stock_type,remark, updated_by, updated_time, created_by, created_time
+    </sql>
+
+    <select id="pageInfo" resultType="cn.jb.boot.biz.item.vo.response.DefectiveStockPageResponse"
+            parameterType="cn.jb.boot.biz.item.vo.request.DefectiveStockPageRequest">
+        select tds.id,tds.item_no,mis.item_name,mis.bom_no,tds.item_count,tds.created_time,tds.remark,tds.stock_type
+        from t_defective_stock tds inner join mes_item_stock mis on mis.item_no=tds.item_no
+        <where>
+            <if test="p.itemNo != null and p.itemNo != ''">
+                and tds.item_no =#{p.itemNo}
+            </if>
+            <if test="p.stockType != null and p.stockType != ''">
+                and tds.stock_type =#{p.stockType}
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and tds.created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and tds.created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+
+        </where>
+        order by tds.created_time desc
+    </select>
+</mapper>

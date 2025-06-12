@@ -1,0 +1,27 @@
+package cn.jb.boot.biz.item.mapper;
+
+import cn.jb.boot.biz.item.entity.MesItemStock;
+import cn.jb.boot.biz.item.entity.MesItemUse;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+
+import java.util.List;
+
+/**
+ * 产品用料表 Mapper 接口
+ *
+ * @author lxl
+ * @Description
+ * @Copyright Copyright (c) 2023
+ * @since 2023-12-28 16:55:58
+ */
+public interface MesItemUseMapper extends BaseMapper<MesItemUse> {
+
+    /**
+     * 根据条件分页查询产品用料表列表
+     *
+     * @param params 产品用料表信息
+     * @return 产品用料表信息集合信息
+     */
+
+    List<MesItemStock> selectUses(String itemNo);
+}

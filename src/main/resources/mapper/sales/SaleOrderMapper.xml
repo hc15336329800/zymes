@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.sales.mapper.SaleOrderMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, order_no, cust_name, item_no, need_num, approved_ordered_num, produced_num, procedure_code, procedure_name,
+        order_status, updated_by, updated_time, created_by, created_time
+    </sql>
+
+    <update id="updateProdCount">
+        update t_sale_order set produced_num = produced_num+#{prodCnt}
+        where id=#{id}
+
+
+    </update>
+
+    <select id="selectMaxOrderNo" resultType="java.lang.String">
+        SELECT max(order_no)
+        from t_sale_order
+        where date (created_time)= CURRENT_DATE
+    </select>
+
+    <sql id="saleListSql">
+        select o.id, o.order_no, o.cust_name, o.item_no, o.need_num, o.approved_ordered_num, o.produced_num,
+        o.order_status,o.created_by , ifnull(ps.ordered_Num,0) ordered_Num,
+        ifnull(o.need_num - ifnull(ps.ordered_Num,0),0) as waitOrderedNum,o.procedure_name,
+        ifnull(o.need_num - o.produced_num,0) as waitProducedNumNum,o.created_time
+        from t_sale_order o
+        left join (select sum(IFNULL((ordered_Num), 0)) ordered_Num, sale_id from t_sale_order_place where place_status
+        &lt;&gt; '02' GROUP BY sale_id) ps
+        on ps.sale_id = o.id
+        <where>
+            <if test='p.orderNo != null and p.orderNo !=""'>
+                AND o.order_no like concat("%",#{p.orderNo},"%")
+            </if>
+            <if test='p.custName != null and p.custName !=""'>
+                AND o.cust_name like concat("%",#{p.custName},"%")
+            </if>
+            <if test='p.itemNo != null and p.itemNo !=""'>
+                AND o.item_no= #{p.itemNo}
+            </if>
+            <if test='p.beginTime != null and p.beginTime !=""'>
+                and o.created_time &gt;= STR_TO_DATE(concat(#{p.beginTime}, ' 00:00:00'),'%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test='p.endTime != null and p.endTime !=""'>
+                and o.created_time &lt;= STR_TO_DATE(concat(#{p.endTime}, ' 23:59:59'),'%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test="p.ids != null and p.ids.size() != 0">
+                and o.id in
+                <foreach collection="p.ids" item="item" separator="," open="(" close=")">
+                    #{item}
+                </foreach>
+            </if>
+            <if test='p.canPlace != null and p.canPlace !=""'>
+                <choose>
+                    <when test="p.canPlace==00">
+                        and ifnull(o.need_num - ifnull(ps.ordered_Num,0),0)=0
+                    </when>
+                    <otherwise>
+                        and ifnull(o.need_num - ifnull(ps.ordered_Num,0),0) &gt; 0
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+        order by o.created_time desc
+
+    </sql>
+
+<!--    <select id="pageList" resultType="cn.jb.boot.biz.sales.vo.response.SaleOrderPageRep"-->
+<!--            parameterType="cn.jb.boot.biz.sales.vo.request.SaleOrderPageReq">-->
+<!--        <include refid="saleListSql"/>-->
+<!--    </select>-->
+
+    <select id="pageList" resultType="cn.jb.boot.biz.sales.vo.response.SaleOrderPageRep"
+            parameterType="cn.jb.boot.biz.sales.vo.request.SaleOrderPageReq">
+        SELECT
+        o.id,
+        o.order_no,
+        o.cust_name,
+        o.item_no,
+        mis.item_name,
+        mis.bom_no,
+        o.need_num,
+        o.approved_ordered_num,
+        o.produced_num,
+        o.order_status,
+        o.created_by,
+        IFNULL(ps.ordered_Num, 0) AS ordered_Num,
+        IFNULL(o.need_num - IFNULL(ps.ordered_Num, 0), 0) AS waitOrderedNum,
+        o.procedure_name,
+        IFNULL(o.need_num - o.produced_num, 0) AS waitProducedNumNum,
+        o.created_time
+        FROM t_sale_order o
+        LEFT JOIN (
+        SELECT SUM(IFNULL(ordered_Num, 0)) AS ordered_Num, sale_id
+        FROM t_sale_order_place
+        WHERE place_status &lt;&gt; '02'
+        GROUP BY sale_id
+        ) ps ON ps.sale_id = o.id
+        LEFT JOIN mes_item_stock mis ON mis.item_no = o.item_no
+        <where>
+            <if test='p.orderNo != null and p.orderNo !=""'>
+                AND o.order_no LIKE CONCAT("%", #{p.orderNo}, "%")
+            </if>
+            <if test='p.custName != null and p.custName !=""'>
+                AND o.cust_name LIKE CONCAT("%", #{p.custName}, "%")
+            </if>
+            <if test='p.itemNo != null and p.itemNo !=""'>
+                AND o.item_no = #{p.itemNo}
+            </if>
+            <if test='p.beginTime != null and p.beginTime !=""'>
+                AND o.created_time &gt;= STR_TO_DATE(CONCAT(#{p.beginTime}, ' 00:00:00'), '%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test='p.endTime != null and p.endTime !=""'>
+                AND o.created_time &lt;= STR_TO_DATE(CONCAT(#{p.endTime}, ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test="p.ids != null and p.ids.size() != 0">
+                AND o.id IN
+                <foreach collection="p.ids" item="item" separator="," open="(" close=")">
+                    #{item}
+                </foreach>
+            </if>
+            <if test='p.canPlace != null and p.canPlace !=""'>
+                <choose>
+                    <when test="p.canPlace == '00'">
+                        AND IFNULL(o.need_num - IFNULL(ps.ordered_Num, 0), 0) = 0
+                    </when>
+                    <otherwise>
+                        AND IFNULL(o.need_num - IFNULL(ps.ordered_Num, 0), 0) &gt; 0
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+        ORDER BY o.created_time DESC
+    </select>
+
+
+    <select id="listSalesOrder" resultType="cn.jb.boot.biz.sales.vo.response.SaleOrderPageRep">
+        <include refid="saleListSql"/>
+    </select>
+
+</mapper>

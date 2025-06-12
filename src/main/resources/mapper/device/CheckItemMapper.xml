@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.device.mapper.CheckItemMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, check_type, check_content, check_standard,remark, updated_by, updated_time, created_by, created_time
+    </sql>
+
+    <select id="pageInfo" resultType="cn.jb.boot.biz.device.vo.response.CheckItemPageResponse"
+            parameterType="cn.jb.boot.biz.device.vo.request.CheckItemPageRequest">
+        select
+        <include refid="Base_Column_List"/>
+        from t_check_item
+        <where>
+            <if test="p.checkType != null and p.checkType != ''">
+                and check_type =#{p.checkType}
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+            <if test="p.ids != null and p.ids.size()>0 ">
+                and id in
+                <foreach collection="p.ids" item="item" index="index" open="(" close=")" separator=",">
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+        order by created_time desc
+    </select>
+</mapper>

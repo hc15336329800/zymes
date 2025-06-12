@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.group.mapper.GroupInfoMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, group_name, group_uid, dept_id, updated_by, updated_time, created_by, created_time,remark
+    </sql>
+
+    <select id="pageInfo" resultType="cn.jb.boot.biz.group.vo.response.GroupInfoPageResponse"
+            parameterType="cn.jb.boot.biz.group.vo.request.GroupInfoPageRequest">
+        select
+        <include refid="Base_Column_List"/>
+        from t_group_info
+        <where>
+            <if test="p.userId != null and p.userId != ''">
+                and group_uid =#{p.userId}
+            </if>
+            <if test="p.deptId != null and p.deptId != ''">
+                and dept_id =#{p.deptId}
+            </if>
+            <if test="p.groupName != null and p.groupName != ''">
+                and group_name like concat('%',#{p.groupName},'%')
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+        </where>
+        order by created_time desc
+    </select>
+    <select id="selected" resultType="cn.jb.boot.system.vo.response.DictListResponse">
+
+        select id code,group_name name
+        from t_group_info
+
+
+    </select>
+</mapper>

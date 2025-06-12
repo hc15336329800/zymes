@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.item.mapper.BomUsedMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, item_no, use_item_no,parent_code,used_id, use_item_count,fixed_used, use_item_type, item_nos, bom_no,
+        updated_by, updated_time, created_by, created_time
+    </sql>
+
+
+    <select id="selectByItemNo" resultType="cn.jb.boot.biz.item.entity.BomUsed">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM t_bom_used
+        WHERE item_no IN
+        <foreach collection="itemNos" item="itemNo" open="(" separator="," close=")">
+            #{itemNo}
+        </foreach>
+    </select>
+
+
+</mapper>

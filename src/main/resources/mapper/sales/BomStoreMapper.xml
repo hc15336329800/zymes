@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.sales.mapper.BomStoreMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, delivery_id, item_no, biz_type, store_status, item_count, item_measure, confirm_time, auto_flag,
+        mes_item_count, erp_item_count, updated_by, updated_time, created_by, created_time
+    </sql>
+
+    <select id="sta" resultType="cn.jb.boot.biz.sales.vo.response.BomStoreStaResp">
+        select (ifnull(sum(item_count), 0) -
+        case when auto_flag = '00' and biz_type = '01' then ifnull(sum(item_count), 0) else 0 end) item_count,
+        date_format(confirm_time, '%Y-%m') as month
+        from t_bom_store
+        where store_status = '01'
+        and (biz_type = '02'
+        or (auto_flag = '00'
+        and biz_type = '01'))
+        and year (confirm_time) = #{req.year}
+        group by date_format(confirm_time, '%Y-%m')
+
+
+    </select>
+    <select id="staDetail" resultType="cn.jb.boot.biz.sales.vo.response.StaDetailResp">
+        select item_no, biz_type, item_count, item_measure, item_no,confirm_time
+        from t_bom_store
+        where store_status = '01'
+        and (biz_type = '02' or (auto_flag = '00' and biz_type = '01'))
+        and date_format(confirm_time, '%Y-%m') = #{req.time}
+
+    </select>
+    <select id="pageList" resultType="cn.jb.boot.biz.sales.vo.response.BomStoreResp">
+        select id,item_no, biz_type, item_count, confirm_time,store_status,auto_flag,created_time
+        from t_bom_store
+        <where>
+            <if test="p.itemNo != null and p.itemNo != ''">
+                and item_no =#{p.itemNo}
+            </if>
+            <if test="p.bizType != null and p.bizType != ''">
+                and biz_type =#{p.bizType}
+            </if>
+            <if test="p.storeStatus != null and p.storeStatus != ''">
+                and store_status =#{p.storeStatus}
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+        </where>
+        order by created_time desc
+
+
+    </select>
+
+</mapper>

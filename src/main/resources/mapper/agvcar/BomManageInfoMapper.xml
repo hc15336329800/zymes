@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.agvcar.mapper.BomManageInfoMapper">
+
+
+    <!-- 查询物料 -->
+    <select id="materialMessage" resultType="java.util.Map"
+            parameterType="java.util.Map">
+        select * from DBSNMP.JSPMATERIAL
+    </select>
+    <select id="receiptMessage" resultType="java.util.Map"
+            parameterType="java.util.Map">
+        select * from DBSNMP.JSPRECEIPT
+    </select>
+    <select id="bomMessage" resultType="java.util.Map"
+            parameterType="java.util.Map">
+        select * from DBSNMP.JSPBOM
+    </select>
+    <select id="bomRouter" resultType="java.util.Map"
+            parameterType="java.util.Map">
+        select * from DBSNMP.JSPBOMROUTER
+    </select>
+</mapper>

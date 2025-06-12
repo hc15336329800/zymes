@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.device.mapper.CheckInfoMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, name, check_type, device_id, item_id, begin_time, end_time, user_id, updated_by, updated_time, created_by,
+        created_time,remark
+    </sql>
+
+    <select id="pageInfo" resultType="cn.jb.boot.biz.device.vo.response.CheckInfoPageResponse"
+            parameterType="cn.jb.boot.biz.device.vo.request.CheckInfoPageRequest">
+        select tci.id, tci.name, tci.check_type, tci.device_id,di.device_no,di.device_name, tci.item_id, tci.begin_time,
+        tci.end_time, tci.user_id,tci.created_time,tci.remark
+        from t_check_info tci inner join t_device_info di on di.id=tci.device_id
+        <where>
+            <if test="p.checkType != null and p.checkType != ''">
+                and tci.check_type =#{p.checkType}
+            </if>
+            <if test="p.name != null and p.name != ''">
+                and tci.name like concat('%',#{p.name},'%')
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and tci.created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and tci.created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+        </where>
+        order by tci.created_time desc
+    </select>
+</mapper>

@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.work.mapper.WorkOrderMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, alloc_id, order_dtl_id, work_order_no, item_no, procedure_code, procedure_name, plan_total_count,
+        assign_count, real_count, to_review_real_count, deff_count, to_review_deff_count, device_id, dept_id,
+        hours_fixed, shift_type, proc_status, data_status, updated_by, updated_time, created_by, created_time,updated_time
+    </sql>
+
+
+    <select id="pageInfo" resultType="cn.jb.boot.biz.work.vo.response.WorkOrderPageResponse"
+            parameterType="cn.jb.boot.biz.work.vo.request.WorkOrderPageRequest">
+        select
+        two.id,
+        two.alloc_id,
+        two.order_dtl_id,
+        two.work_order_no,
+        two.item_no as itemNo,                  <!-- 物料编码 -->
+        mis.item_name as itemName,              <!-- 物料名称（左联查） -->
+        tod.order_no as orderNo,                <!-- 订单号（左联查） -->
+        two.procedure_code,
+        two.procedure_name,
+        two.plan_total_count,
+        two.assign_count,
+        two.real_count,
+        two.to_review_real_count,
+        two.deff_count,
+        two.to_review_deff_count,
+        two.device_id,
+        two.dept_id,
+        two.hours_fixed,
+        two.shift_type,
+        two.proc_status,
+        two.data_status,
+        two.updated_by,
+        two.updated_time,
+        two.created_by,
+        two.created_time,
+        two.state,
+        two.group_id
+        from t_work_order two
+        left join mes_item_stock mis on two.item_no = mis.item_no    <!-- 物料名称 -->
+        left join t_order_dtl tod on two.order_dtl_id = tod.id       <!-- 订单号 -->
+        where 1=1
+        <if test="p.workOrderNo != null and p.workOrderNo != ''">
+            and two.work_order_no like concat('%',#{p.workOrderNo},'%')
+        </if>
+        <if test="p.deviceId != null and p.deviceId != ''">
+            and two.device_id=#{p.deviceId}
+        </if>
+        <if test="p.deptId != null and p.deptId != ''">
+            and two.dept_id=#{p.deptId}
+        </if>
+        <if test="p.itemNo != null and p.itemNo != ''">
+            and two.item_no=#{p.itemNo}
+        </if>
+        <if test="p.status != null and p.status == '01'">
+            and two.plan_total_count != two.real_count
+        </if>
+        <if test="p.status != null and p.status == '02'">
+            and two.plan_total_count = two.real_count
+        </if>
+        <if test="p.procedureNames != null and p.procedureNames.size()>0 ">
+            and two.procedure_name in
+            <foreach collection="p.procedureNames" item="name" index="index" open="(" close=")" separator=",">
+                #{name}
+            </foreach>
+        </if>
+        <!-- ★★★ 数据权限：只看自己所在分组的工单 -->
+        <if test="p.userId != null and p.userId != ''">
+            and exists (
+            select 1
+            from t_group_dtl g
+            where g.group_id = two.group_id
+            and g.user_id = #{p.userId}
+            )
+        </if>
+        order by two.created_time desc
+    </select>
+
+
+
+    <!--    <select id="pageInfo" resultType="cn.jb.boot.biz.work.vo.response.WorkOrderPageResponse"-->
+<!--            parameterType="cn.jb.boot.biz.work.vo.request.WorkOrderPageRequest">-->
+<!--        select-->
+<!--        <include refid="Base_Column_List"/>-->
+<!--        from t_work_order two-->
+<!--        where 1=1-->
+<!--            <if test="p.workOrderNo != null and p.workOrderNo != ''">-->
+<!--                and two.work_order_no like concat('%',#{p.workOrderNo},'%')-->
+<!--            </if>-->
+<!--            <if test="p.deviceId != null and p.deviceId != ''">-->
+<!--                and two.device_id=#{p.deviceId}-->
+<!--            </if>-->
+<!--            <if test="p.deptId != null and p.deptId != ''">-->
+<!--                and two.dept_id=#{p.deptId}-->
+<!--            </if>-->
+<!--            <if test="p.itemNo != null and p.itemNo != ''">-->
+<!--                and two.item_no=#{p.itemNo}-->
+<!--            </if>-->
+<!--            <if test="p.status != null and p.status == '01'">-->
+<!--                and two.plan_total_count != two.real_count-->
+<!--            </if>-->
+<!--            <if test="p.status != null and p.status == '02'">-->
+<!--                and two.plan_total_count = two.real_count-->
+<!--            </if>-->
+<!--            <if test="p.procedureNames != null and p.procedureNames.size()>0 ">-->
+<!--                and two.procedure_name-->
+<!--                in-->
+<!--                <foreach collection="p.procedureNames" item="name" index="index" open="(" close=")" separator=",">-->
+<!--                    #{name}-->
+<!--                </foreach>-->
+<!--            </if>-->
+<!--        order by two.created_time desc-->
+<!--    </select>-->
+<!--    -->
+<!--    -->
+
+
+    <select id="maxOrderNo" resultType="java.lang.Long">
+        SELECT max(cast(REPLACE(w.work_order_no, 'GD-', '') as UNSIGNED INTEGER)) as order_no
+        from t_work_order w
+    </select>
+    <insert id="saveItemand">
+        INSERT INTO t_confirm_produce (id,item_no, item_name,
+        deviceName,realCount,deffCount,satus,date_time,bomNo)VALUES(#{id},#{itemno},#{itemname},#{deviceName},#{realCount},#{deffCount},#{satus},#{datetime},#{bomNo})
+    </insert>
+    <update id="updateItemand">
+        update t_confirm_produce
+        set realCount = #{realCount},satus = '1',trayid = #{trayid},location = #{location}
+        where satus = '0' and deviceName = #{deviceName}
+        <if test="bomNo != null and bomNo != ''">
+            and bomNo like concat('%',#{bomNo},'%')
+        </if>
+    </update>
+    <update id="updateItemandByBom">
+        update t_confirm_produce set realCount = #{realCount} ,satus = '2' where deviceName = #{deviceName} and bomNo
+        like concat('%',#{bomNo},'%') and satus = '0'
+    </update>
+    <update id="updateItemandByItemName">
+        update t_confirm_produce set realCount = #{realCount} ,satus = '2' where deviceName = #{deviceName} and
+        item_name = #{itemName} and satus = '0'
+    </update>
+    <select id="getItemNumber" resultType="java.util.Map" parameterType="java.util.Map">
+        select * from t_confirm_produce where deviceName = #{deviceName} and bomNo = #{bomNo} and satus = '2' order by
+        date_time desc limit 1
+    </select>
+    <!--    根据物料编码获取物料名称-->
+    <select id="getItemByItemNo" resultType="java.util.Map" parameterType="java.util.Map">
+        select * from mes_item_stock where item_no = #{itemno} limit 1;
+    </select>
+    <select id="orderPageInfo" resultType="cn.jb.boot.biz.work.vo.response.WorkOrderPageResponse"
+            parameterType="cn.jb.boot.biz.work.vo.request.WorkOrderRequest">
+        select
+        <include refid="Base_Column_List"/>
+        from t_work_order two
+        where 1=1
+        <if test="p.bomNoList != null and p.bomNoList.size()>0 ">
+            and two.bom_no
+            in
+            <foreach collection="p.bomNoList" item="bomNo" index="index" open="(" close=")" separator=",">
+                #{bomNo}
+            </foreach>
+        </if>
+        order by two.created_time desc
+    </select>
+</mapper>

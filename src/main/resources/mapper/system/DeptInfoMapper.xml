@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.system.mapper.DeptInfoMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, dept_name, pater_id,seq_no, remark, updated_by, updated_time, created_by, created_time,director_uid,
+        dept_type
+    </sql>
+
+    <select id="listByPaterId" parameterType="java.lang.String"
+            resultType="cn.jb.boot.system.vo.response.DeptTreeSelectResponse">
+        WITH RECURSIVE cd AS (
+        SELECT di.id, di.dept_name,di.seq_no, di.pater_id,di.created_time ,di.created_by,di.director_uid from
+        sys_dept_info di where di.pater_id = #{paterId,jdbcType=VARCHAR}
+        UNION ALL
+        SELECT sdi.id, sdi.dept_name,sdi.seq_no, sdi.pater_id ,sdi.created_time ,sdi.created_by,sdi.director_uid from
+        sys_dept_info sdi, cd where sdi.pater_id = cd.id
+        )
+        SELECT cd.id id, cd.dept_name label,cd.seq_no, cd.pater_id parId,created_time ,cd.created_by,cd.director_uid
+        FROM cd
+    </select>
+
+    <select id="topDeptId" parameterType="java.lang.String" resultType="java.lang.String">
+        WITH RECURSIVE cd AS (
+        SELECT 1 i, di.pater_id from sys_dept_info di where di.id = #{id,jdbcType=VARCHAR}
+        UNION ALL
+        SELECT i + 1, sdi.pater_id from sys_dept_info sdi, cd where sdi.id = cd.pater_id
+        ) SELECT pater_id FROM cd order by i desc limit 1
+    </select>
+
+    <select id="subDeptId" parameterType="java.lang.String" resultType="java.lang.String">
+        WITH RECURSIVE cd AS (
+        SELECT di.id from sys_dept_info di where di.pater_id = #{paterId,jdbcType=VARCHAR}
+        UNION ALL
+        SELECT sdi.id from sys_dept_info sdi, cd where sdi.pater_id = cd.id
+        ) SELECT id FROM cd
+    </select>
+    <select id="workShopSelect" resultType="cn.jb.boot.system.vo.DictDataVo">
+        select id dict_value, dept_name dict_label,1 dictSort from sys_dept_info where dept_type='01'
+    </select>
+
+
+</mapper>

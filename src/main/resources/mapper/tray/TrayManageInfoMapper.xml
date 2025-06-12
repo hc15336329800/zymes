@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.tray.mapper.TrayManageInfoMapper">
+
+    <update id="upproduce">
+        UPDATE t_confirm_produce
+        SET trayid = #{trayid}, deviceName = #{deviceName}, item_name = #{itemname}, realCount = #{realCount}, location
+        = #{location} where id = #{id}
+    </update>
+    <select id="pageInfo" resultType="cn.jb.boot.biz.tray.vo.response.TrayManageInfoResponse">
+        select confirm.id,confirm.trayid,confirm.deviceName,confirm.location,item.item_name,(confirm.realCount -
+        confirm.deffCount) as realCount,confirm.deffCount from t_confirm_produce confirm left JOIN mes_item_stock item
+        ON confirm.item_no = item.item_no where satus = '1' order by confirm.date_time desc
+    </select>
+    <insert id="add">
+        INSERT INTO t_confirm_produce (id,trayid, deviceName, item_no, item_name, realCount,
+        location)VALUES(#{id},#{trayid},#{deviceName},#{itemno},#{itemname},#{realCount},#{location})
+    </insert>
+
+    <insert id="addPdaData">
+        INSERT INTO t_tray_info (id,trayid, procedure_code, procedure_name, procedure_count,
+        location_code,updated_time,status,deviceName)VALUES(#{id},#{trayId},#{procedureCode},#{procedureName},#{procedureCount},#{locationId},#{updated_time},#{status},#{deviceName})
+    </insert>
+    <select id="selectItem" resultType="java.util.Map" parameterType="java.util.Map">
+        SELECT confirm.item_no,item.item_name,confirm.deviceName,confirm.realCount,confirm.deffCount FROM
+        t_confirm_produce confirm INNER JOIN mes_item_stock item ON confirm.item_no = item.item_no WHERE
+        confirm.deviceName = #{deviceName} and confirm.satus = '1' ORDER BY confirm.date_time desc LIMIT 1;
+    </select>
+    <select id="getDevice" resultType="java.util.Map" parameterType="java.util.Map">
+        select device,station,location from t_device_location where station = #{station} and location = #{locationId}
+        limit 1;
+    </select>
+    <select id="getTrayData" resultType="java.util.Map" parameterType="java.util.Map">
+        select deviceName,location_code,trayid from t_tray_info
+        <where>
+            <if test="deviceName != null and deviceName != ''">
+                and deviceName = #{deviceName}
+            </if>
+            <if test="location != null and location != ''">
+                and location_code = #{location}
+            </if>
+
+        </where>
+        order by updated_time desc limit 1
+    </select>
+    <!-- 查询工位库位基本信息-->
+    <select id="getStation" resultType="java.util.Map" parameterType="java.util.Map">
+        select * from t_device_location
+        <where>
+            <if test="station != null and station != ''">
+                and station = #{station}
+            </if>
+
+        </where>
+    </select>
+    <!-- 获取所有的文件地址信息-->
+    <select id="getAllDeviceUrl" resultType="java.util.Map" parameterType="java.util.Map">
+        select * from t_device_url where status = '0'
+    </select>
+    <!-- 删除托盘数据-->
+    <delete id="delete">
+        delete from t_confirm_produce where id = #{id}
+    </delete>
+    <!-- 获取物料信息-->
+    <select id="getItem" resultType="java.util.Map" parameterType="java.util.Map">
+        SELECT DISTINCT confirm.item_no,item.item_name FROM t_confirm_produce confirm INNER JOIN mes_item_stock item ON
+        confirm.item_no = item.item_no WHERE confirm.deviceName = #{deviceName}
+    </select>
+    <!-- 根据物料名称获取物料编码-->
+    <select id="getItemNo" resultType="java.util.Map"
+            parameterType="cn.jb.boot.biz.tray.vo.response.TrayManageInfoResponse">
+        SELECT * FROM t_confirm_produce where item_name = #{itemname} limit 1
+    </select>
+</mapper>

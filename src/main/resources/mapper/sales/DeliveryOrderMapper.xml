@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.sales.mapper.DeliveryOrderMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, destination, customer, delivery_date, deliverer, accepted_by, doorman, prepared_by, quality_by, box_num,
+        status, commit_status, main_id, updated_by, updated_time, created_by, created_time
+    </sql>
+    <select id="pageList" resultType="cn.jb.boot.biz.sales.vo.response.DeliveryMainPageResp">
+        select
+        t1.id, t1.destination, t1.customer, t1.delivery_date, t1.deliverer, t1.accepted_by, t1.doorman, t1.prepared_by,
+        t1.quality_by, t1.box_num,
+        t1.status,t1.commit_status,t2.truck
+        from t_delivery_order t1 inner join
+        t_delivery_dtl t2 on t1.id=t2.delivery_id
+        <where>
+            <if test="p.destination!=null and p.destination !=''">
+                destination like concat('%',#{p.destination},'%')
+            </if>
+            <if test="p.customer!=null and p.customer !=''">
+                and customer like concat('%',#{p.customer},'%')
+            </if>
+            <if test="p.status!=null and p.status !=''">
+                and status =#{p.status}
+            </if>
+            <if test="p.startDate!=null ">
+                and delivery_date &gt;= #{p.startDate}
+            </if>
+            <if test="p.endDate!=null ">
+                and delivery_date &lt;= #{p.endDate}
+            </if>
+            <if test="p.truck!=null and p.truck !=''">
+                and t2.truck like concat('%',#{p.truck},'%')
+            </if>
+
+
+        </where>
+        group by t1.id
+        order by t1.delivery_date desc,t2.truck
+
+
+    </select>
+
+</mapper>
