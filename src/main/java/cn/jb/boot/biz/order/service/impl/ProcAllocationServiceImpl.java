@@ -2,6 +2,7 @@ package cn.jb.boot.biz.order.service.impl;
 
 import cn.jb.boot.biz.order.entity.ProcAllocation;
 import cn.jb.boot.biz.order.mapper.ProcAllocationMapper;
+import cn.jb.boot.biz.order.service.OrderDtlService;
 import cn.jb.boot.biz.order.service.ProcAllocationService;
 import cn.jb.boot.biz.order.util.SeqUtil;
 import cn.jb.boot.biz.order.vo.request.BatchProcAllocReq;
@@ -47,6 +48,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+ import cn.jb.boot.biz.order.vo.request.OrderDtlUpdateStatusRequest;
+
+
 
 /**
  * 工序分配表 服务实现类
@@ -112,7 +117,11 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
     }
 
 
-//    批量工单下达
+    @Resource
+    private OrderDtlService orderDtlService;
+
+
+    //    批量工单下达
     @Override
     @Transactional(rollbackFor = Throwable.class)
     public void createWorkOrder(BatchProcAllocReq params) {
@@ -129,6 +138,34 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
         saveWorkOrder(params.getShiftType(),params.getGroupId(), list, map);
         // 6. 批量更新工序分配记录
         this.updateBatchById(pas);
+
+// —— todo：下发完成后，检查每个 orderDtlId，若该子件下所有工序已分配，则改状态为09
+        List<String> detailIds = pas.stream()
+                .map(ProcAllocation::getOrderDtlId)
+                .distinct()
+                .collect(Collectors.toList());
+        for (String detailId : detailIds) {
+            // 查询该明细下的所有工序分配记录
+            List<ProcAllocation> allPas = this.list(
+                    new LambdaQueryWrapper<ProcAllocation>()
+                            .eq(ProcAllocation::getOrderDtlId, detailId)
+            );
+            // 判断是否全部已分配（工厂+外协 >= 总数）
+            boolean allScheduled = allPas.stream().allMatch(pa ->
+                    pa.getWorkerAllocCount()
+                            .add(pa.getOuterAllocCount())
+                            .compareTo(pa.getTotalCount()) >= 0
+            );
+            if (allScheduled) {
+                // 构建更新请求
+                OrderDtlUpdateStatusRequest req = new OrderDtlUpdateStatusRequest();
+                req.setId(detailId);
+                req.setOrderDtlStatus("09");
+                // 调用服务更新状态为“已排产”
+                orderDtlService.updateStatus(req);
+            }
+        }
+
     }
 
     @Override

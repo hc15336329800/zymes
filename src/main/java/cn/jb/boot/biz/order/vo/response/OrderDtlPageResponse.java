@@ -4,15 +4,17 @@ import cn.jb.boot.framework.annotation.DictTrans;
 import cn.jb.boot.framework.com.DictType;
 import cn.jb.boot.util.DateUtil;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
- * 订单明细表表 分页返回参数
+ * 订单明细表分页返回参数
  *
  * @author lxl
  * @Description
@@ -20,64 +22,54 @@ import java.time.LocalDateTime;
  * @since 2024-01-05 19:00:38
  */
 @Data
-@Schema(name = "OrderDtlPageResponse", description = "订单明细表 分页返回参数")
+@Schema(name = "OrderDtlPageResponse", description = "订单明细表分页返回参数")
 public class OrderDtlPageResponse implements Serializable {
-
-    /**
-     * 物料/bom 名称  新
-     */
-    private String itemName;
-
     private static final long serialVersionUID = 1L;
-    /**
-     * 主键ID
-     */
+
+    /* 树形结构相关字段 */
+    /** 子节点：同一个 orderNo 下的所有明细 */
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<OrderDtlPageResponse> children;
+
+    /* 基本信息 */
     @Schema(description = "主键ID")
     private String id;
 
-    /**
-     * 生产单号
-     */
     @Schema(description = "生产单号")
     private String orderNo;
 
-    /**
-     * 产品编码
-     */
-    @Schema(description = "产品编码")
-    @DictTrans(type = DictType.BOM_NO, name = "bomNo")
-    private String itemNo;
+    @Schema(description = "顶层BOM号")
+    private String topBomNo;
 
-    /**
-     * 产品数量
-     */
+    @Schema(description = "BOM号")
+    private String bomNo;
+
+    /* 产品信息 */
+    @Schema(description = "物料/bom名称")
+    private String itemName;
+
+    @Schema(description = "产品编码")
+     private String itemNo;
+
     @Schema(description = "产品数量")
     private BigDecimal itemCount;
 
-    /**
-     * 已生产数量
-     */
     @Schema(description = "已生产数量")
     private BigDecimal productionCount;
 
-    /**
-     * 订单明细状态;01:就绪，02:排程中
-     */
+    /* 状态信息 */
     @Schema(description = "订单明细状态;01:就绪，02:排程中")
-    @DictTrans(type = DictType.ORDER_STATUS)
+    @DictTrans(type = DictType.ORDER_STATUS, name = "orderDtlStatusDesc")
     private String orderDtlStatus;
 
+//    @Schema(description = "订单明细状态描述")  删掉不然会重复
+//    private String orderDtlStatusDesc;
 
-    /**
-     * 最后登陆时间
-     */
+    /* 时间信息 */
     @Schema(description = "创建时间")
     @JsonFormat(pattern = DateUtil.YYYY_MM_DD_HH_MM_SS)
     private LocalDateTime createdTime;
 
-    /**
-     * 最后更新时间
-     */
     @Schema(description = "更新时间")
     @JsonFormat(pattern = DateUtil.YYYY_MM_DD_HH_MM_SS)
     private LocalDateTime updatedTime;

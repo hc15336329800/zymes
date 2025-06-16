@@ -18,6 +18,9 @@ import java.util.List;
 @Schema(name = "OrderDtlPageRequest", description = "订单明细表 分页请求参数")
 public class OrderDtlPageRequest implements Serializable {
 
+    @Schema(description = "物料名称（模糊查询）")
+    private String itemName;
+
     private static final long serialVersionUID = 1L;
 
     @Schema(description = "开始时间 yyyy-MM-dd")

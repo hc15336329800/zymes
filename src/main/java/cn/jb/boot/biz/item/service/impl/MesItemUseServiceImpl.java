@@ -1,6 +1,9 @@
 package cn.jb.boot.biz.item.service.impl;
 
+import cn.jb.boot.biz.item.dto.TreeUtil;
+import cn.jb.boot.biz.item.dto.UseItemTreeRow;
 import cn.jb.boot.biz.item.entity.BomUsed;
+import cn.jb.boot.biz.item.mapper.BomUsedMapper;
 import cn.jb.boot.biz.item.vo.request.MesItemUseUpdateRequest;
 import cn.jb.boot.framework.com.DictType;
 import cn.jb.boot.framework.config.SpringContextUtil;
@@ -19,12 +22,7 @@ import cn.jb.boot.biz.item.vo.request.MesItemUsedUploadRequest;
 import cn.jb.boot.biz.item.vo.response.ItemResp;
 import cn.jb.boot.biz.item.vo.response.UseItemTreeResp;
 import cn.jb.boot.biz.item.vo.response.MesItemUseInfoResponse;
-import cn.jb.boot.util.BomUsedUtil;
-import cn.jb.boot.util.DictUtil;
-import cn.jb.boot.util.EasyExcelUtil;
-import cn.jb.boot.util.FileUtil;
-import cn.jb.boot.util.PojoUtil;
-import cn.jb.boot.util.ThreadPool;
+import cn.jb.boot.util.*;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -72,18 +70,46 @@ public class MesItemUseServiceImpl extends ServiceImpl<MesItemUseMapper, MesItem
     @Resource
     private MesItemUseService mesItemUseService;
 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    @Resource
+    private BomUsedMapper bomUsedMapper;
+
+    /** bom树构造器  （  将 List<BomUsed> list  + String root   构建为前端树结构）*/
     @Override
-    public void export(HttpServletResponse response, String id) {
+    public UseItemTreeResp itemUseTreeNew(ItemNoRequest params) {
+
+        String root = params.getItemNo();
+        // ───────────【修改】一次性查询：根节点及其所有后代
+        List<BomUsed> list = bomUsedMapper.selectList(
+                new LambdaQueryWrapper<BomUsed>()
+                        .and(w -> w.eq(BomUsed::getItemNos, root)
+                                .or().likeRight(BomUsed::getItemNos, root + "|"))
+        );
+        // ───────────【保留】内存组装递归树， 使用原来的
+//        return BomUsedUtil.tree(list, root);   原始的正常使用
+        return BomUsedNewUtil.tree(list, root);  //测试
 
 
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     @Override
     public UseItemTreeResp itemUseTree(ItemNoRequest params) {
         //用料树
         List<BomUsed> list = bomUsedService.tree(params.getItemNo());
         return BomUsedUtil.tree(list, params.getItemNo());
+    }
+
+
+
+
+    @Override
+    public void export(HttpServletResponse response, String id) {
+
+
     }
 
     @Override

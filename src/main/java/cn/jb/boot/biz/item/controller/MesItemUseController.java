@@ -53,7 +53,10 @@ public class MesItemUseController {
 
 
 
-    /** 一步到位：校验→写 mes_item_use →写 t_bom_used */
+    /**
+     * 上传用料表
+     * 一步到位：校验→写 mes_item_use →写 t_bom_used
+     * */
     @PostMapping("/uploadNew")
     public AjaxResult uploadNew(@RequestPart("file") MultipartFile file) {
         try {
@@ -70,17 +73,27 @@ public class MesItemUseController {
     }
 
 
-//    /** ② 生成 BOM 树：支持单个或批量根物料 */
-//    @PostMapping("/refreshBomTree")
-//    public AjaxResult refreshBomTree(@RequestBody List<String> rootItemNos) {
-//        rootItemNos.forEach(bomTreeService::rebuildByRoot);
-//        return AjaxResult.success("BOM 树已重建");
-//    }
-
-
+//    bom树构造器  （  将 List<BomUsed> list  + String root   构建为前端树结构）
+    @PostMapping("/item_use_tree_new")
+    @Operation(summary = "查看用料树（优化版）")
+    public BaseResponse<UseItemTreeResp> itemUseTreeNew(@RequestBody @Valid BaseRequest<ItemNoRequest> request) {
+        UseItemTreeResp tree = service.itemUseTreeNew(MsgUtil.params(request));
+        return MsgUtil.ok(tree);
+    }
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+//原始
+    @PostMapping("/item_use_tree")
+    @Operation(summary = "查看用料树")
+    public BaseResponse<UseItemTreeResp> itemUseTree(@RequestBody @Valid BaseRequest<ItemNoRequest> request) {
+        UseItemTreeResp entity = service.itemUseTree(MsgUtil.params(request));
+        return MsgUtil.ok(entity);
+    }
+
+
 
     /**
      * 新增记录
@@ -165,12 +178,6 @@ public class MesItemUseController {
         return MsgUtil.ok();
     }
 
-    @PostMapping("/item_use_tree")
-    @Operation(summary = "查看用料树")
-    public BaseResponse<UseItemTreeResp> itemUseTree(@RequestBody @Valid BaseRequest<ItemNoRequest> request) {
-        UseItemTreeResp entity = service.itemUseTree(MsgUtil.params(request));
-        return MsgUtil.ok(entity);
-    }
 
     @PostMapping("/item_list")
     @Operation(summary = "查询产品列表")

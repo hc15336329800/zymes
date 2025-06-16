@@ -103,6 +103,8 @@
 
 
     </select>
+
+<!--    查重-->
     <select id="bomPageList" resultType="cn.jb.boot.biz.item.vo.response.MesItemStockPageResponse">
         select
         mis.id, mis.item_no, mis.item_name, mis.item_count bomCount, mis.item_measure, mis.item_origin, mis.item_model,
@@ -135,6 +137,7 @@
 
 
     </select>
+
     <insert id="insertItemStock">
         INSERT INTO mes_item_stock (id,item_no,item_name,item_count,item_measure,item_origin,item_model,bom_no,item_type,location,remark,item_count_assist,item_measure_assist,uni_id,is_valid,erp_count,net_weight,created_by,created_time,updated_by,updated_time)
         VALUES(#{id},#{itemNo},#{itemName},#{itemCount},#{itemMeasure},#{itemOrigin},#{itemModel},#{bomNo},#{itemType},#{location},#{remark},#{itemCountAssist},#{itemMeasureAssist},#{uniId},#{isValid},#{erpCount},#{netWeight},#{createdBy},#{createdTime},#{updatedBy},#{updatedTime})

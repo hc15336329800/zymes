@@ -12,10 +12,10 @@ spring:
           password: root123456
 
         db3:
-            driver-class-name: oracle.jdbc.driver.OracleDriver
-            url: jdbc:oracle:thin:@127.0.0.1:1521/XEPDB1
-            username: jsp
-            password: root123456
+          driver-class-name: oracle.jdbc.driver.OracleDriver
+          url: jdbc:oracle:thin:@127.0.0.1:1521/XEPDB1
+          username: jsp
+          password: root123456
 
 #         叉车和读取erp数据库
 #        db2:
@@ -23,6 +23,8 @@ spring:
 #            url: jdbc:mysql://182.192.0.9:3306/ego?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
 #            username: ego
 #            password: egorobotics
+
+
 #        db3:
 #            driver-class-name: oracle.jdbc.driver.OracleDriver
 #            url: jdbc:oracle:thin:@127.0.0.1:1521:orcl

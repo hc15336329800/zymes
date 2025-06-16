@@ -43,10 +43,10 @@ public class SyncMidItemJob {
     @Scheduled(cron = "0 0/1 * * * ?")
     public void process() {
 
-         System.out.println("info:  物料同步调用开始（频率一分钟）");
+         System.out.println("info:  物料新增同步调用开始（频率一分钟）");
 
-//        syncMissMids();
-//        updateLastProc();
+        syncMissMids();
+        updateLastProc();
 
     }
 

@@ -96,14 +96,17 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
 
 /////////////////////////////////// 新的bom树   ↓///////////////////////////////////////////
 
+
     //table  bom树  (2516004414-1 测试成功)
+//     潜在问题： 无法正确显示每个节点的bomNo ! ( 不好解决 需要递归)
      public BaseResponse<List<BomTreeNodeVo>> getBomTreePage(BomTreePageDto dto) {
         // 固定 bomNo（测试用）
-        String fixedBomNo = "2516004414-1";
+//        String fixedBomNo = "2516004414-1";
+         String fixedBomNo = dto.getBomNo();
         int pageNum = (dto.getPageNum() == null || dto.getPageNum() <= 0) ? 1 : dto.getPageNum();
         int pageSize = (dto.getPageSize() == null || dto.getPageSize() <= 0) ? 10 : dto.getPageSize();
 
-        // 查询 BOM 用料列表
+//         查询 BOM 用料列表    V3.0.0
         List<BomUsed> list = bomUsedService.list(
                 new LambdaQueryWrapper<BomUsed>().eq(BomUsed::getBomNo, fixedBomNo)
         );

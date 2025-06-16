@@ -39,4 +39,8 @@ public class ProcAllocationPageRequest implements Serializable {
 
     @Schema(description = "分配状态 00:待分配,01:已分配")
     private String allocStatus;
+
+    @Schema(description = "订单明细状态;01:就绪，02:排程中，   03：待生产 ，04：生产中，06：关闭，07：暂停，08：已完成   09：已排产")
+    private String orderDtlStatus;
+
 }

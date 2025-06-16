@@ -44,10 +44,25 @@ public class MidItemStockServiceImpl extends ServiceImpl<MidItemStockMapper, Mid
         return mapper.getMissingMid();
     }
 
+//    @Override
+//    public Map<String, MidItemStock> selectStock(List<String> itemNos) {
+//
+//        List<MidItemStock> mids = mapper.selectStock(itemNos);
+//        return mids.stream().collect(Collectors.toMap(MidItemStock::getItemNo, Function.identity()));
+//    }
+
+
     @Override
     public Map<String, MidItemStock> selectStock(List<String> itemNos) {
-
-        List<MidItemStock> mids = mapper.selectStock(itemNos);
-        return mids.stream().collect(Collectors.toMap(MidItemStock::getItemNo, Function.identity()));
+        // 1. 走 Mapper 拿到 List
+        List<MidItemStock> list = this.baseMapper.selectStock(itemNos);
+        // 2. 转成 Map<itemNo, MidItemStock>
+        return list.stream()
+                .collect(Collectors.toMap(
+                        MidItemStock::getItemNo,
+                        Function.identity(),
+                        (a,b) -> a  // 重复取第一个
+                ));
     }
+
 }

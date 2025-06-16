@@ -46,6 +46,7 @@
                 when #{p.allocStatus} = '01' then total_count &lt;=0 end
             </if>
 
+
         </where>
         order by created_time desc
     </select>

@@ -8,6 +8,9 @@
         vari_use_assist, item_measure_assist, use_item_type, updated_by, updated_time, created_by, created_time
     </sql>
 
+
+
+
     <select id="selectUses" resultType="cn.jb.boot.biz.item.entity.MesItemStock">
         select mis.item_name,
         mis.item_no,

@@ -76,13 +76,133 @@ public class MesItemStockServiceImpl extends ServiceImpl<MesItemStockMapper, Mes
 
     ////////////////////////////////////////////////////////////////////////////新街口//////////////////////////////////////////////////////////////////////////////////
 
-
     /**
-     * 新接口V2： 物料上传 Excel → 导入 mes_item_stock → 更新 mid_item_stock（所有在同一事务中）
-     * 存在则删除重写
+     * 新接口V3： 物料上传 Excel → 导入 mes_item_stock → 更新 mid_item_stock（所有在同一事务中）
+     * 修复第7步
      */
     @Transactional(rollbackFor = Throwable.class)
     public void uploadNew(HttpServletRequest request) {
+        // 1. 取文件 & 校验表头
+        // 1. 取文件 & 读取字典（库位映射）
+        MultipartFile file = FileUtil.getFile(request);
+
+        // 模板格式检查：改用 Arrays.asList
+        List<String> expected = Arrays.asList("图纸号", "物品编码", "数量");
+        List<String> actual   = EasyExcelUtil.readHead(file);
+
+        if (!actual.containsAll(expected)) {
+            throw new ServiceException("导入失败：请使用最新模板，确保包含“图纸号”、“物品编码”、“数量”三列");
+        }
+
+        // 2. 读 Excel VO
+        List<MesItemUploadRequest> list = EasyExcelUtil.importExcel(file, MesItemUploadRequest.class);
+        if (CollectionUtils.isEmpty(list)) {
+            throw new ServiceException("导入失败：文件中无数据");
+        }
+
+        // 3. 准备库位映射
+        Map<String,String> locMap = DictUtil.getDictCache(DictType.WARE_HOUSE)
+                .stream().collect(Collectors.toMap(d->d.getDictLabel(), d->d.getDictValue(), (a,b)->a));
+
+        // 4. 从 VO 映射到 Entity，并做必要的字段处理
+        //    4.1 去重
+        Map<String, MesItemStock> unique = new LinkedHashMap<>();
+        for (MesItemUploadRequest r : list) {
+            String itemNo = StringUtils.trimToEmpty(r.getItemNo());
+            if (itemNo.isEmpty()) continue;
+            // 每次 put，会覆盖上一次，保留最后一条
+            MesItemStock mis = new MesItemStock();
+            mis.setItemNo(itemNo);
+            mis.setItemName(r.getItemName());
+            mis.setItemCount(r.getItemCount());
+            mis.setItemMeasure(r.getItemMeasure());
+            mis.setItemOrigin(r.getItemOrigin());
+            mis.setItemModel(r.getItemModel());
+
+            // —— 关键：根据有没有 bomNo 来设置 itemType 和 bomNo 字段 ——
+            String bomNo = StringUtils.trimToEmpty(r.getBomNo());
+            mis.setBomNo(bomNo);
+            if (StringUtils.isNotBlank(bomNo)) {
+                mis.setItemType("01");   // 半成品
+            } else {
+                mis.setItemType("00");   // 原料
+            }
+
+            // —— 库位映射 ——
+            mis.setLocation(locMap.getOrDefault(r.getLocation(), ""));
+            // （可选）其它默认字段：isValid, uniId, erpCount, netWeight, createdBy/time 等
+
+            unique.put(itemNo, mis);
+        }
+        List<MesItemStock> toAdd = new ArrayList<>(unique.values());
+        if (toAdd.isEmpty()) {
+            throw new ServiceException("导入失败：无有效新物料");
+        }
+
+        // 5. 【改动点】先删旧：根据 itemNo 或 bomNo 删除
+        List<String> itemNos = toAdd.stream()
+                .map(MesItemStock::getItemNo)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .collect(Collectors.toList());
+        List<String> bomNos = toAdd.stream()
+                .map(MesItemStock::getBomNo)
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (!itemNos.isEmpty() || !bomNos.isEmpty()) {
+            LambdaQueryWrapper<MesItemStock> delWrapper = new LambdaQueryWrapper<>();
+            delWrapper.nested(w -> {
+                // 满足 itemNo 条件
+                if (!itemNos.isEmpty()) {
+                    w.in(MesItemStock::getItemNo, itemNos);
+                }
+                // 或者满足 bomNo 条件
+                if (!bomNos.isEmpty()) {
+                    if (!itemNos.isEmpty()) {
+                        w.or();
+                    }
+                    w.in(MesItemStock::getBomNo, bomNos);
+                }
+            });
+            this.remove(delWrapper);
+        }
+
+        // 6. 写入
+        this.saveBatch(toAdd);
+
+        // 7. 批量更新 mid_item_stock 中间件库存（仅 BOM 类型）
+        // todo:   后续修改  暂时不动 1、库存表逻辑不对！如果中间库存表有则导入会覆盖。 2、库存表重复则bom列表查出来也重复
+
+        //    —— 先定义 bomItemNos 列表 ——
+        List<String> bomItemNos = toAdd.stream()
+                .filter(mis -> "01".equals(mis.getItemType()))
+                .map(MesItemStock::getItemNo)
+                .collect(Collectors.toList());
+
+        if (!bomItemNos.isEmpty()) {
+            // 拿到 Map<itemNo, MidItemStock>
+            Map<String, MidItemStock> midMap = midItemStockService.selectStock(bomItemNos);
+            for (MesItemStock mis : toAdd) {
+                if (!"01".equals(mis.getItemType())) continue;
+                MidItemStock mid = midMap.get(mis.getItemNo());
+                if (mid == null) continue;
+                mid.setInitialCount(mis.getItemCount());
+                midItemStockService.updateById(mid);
+           }
+        }
+
+
+    }
+
+
+    /**
+     * 新接口V2： 物料上传 Excel → 导入 mes_item_stock → 更新 mid_item_stock（所有在同一事务中）
+     * 存在则删除重写    有bug
+     */
+    @Transactional(rollbackFor = Throwable.class)
+    public void uploadNew2(HttpServletRequest request) {
         // 1. 取文件 & 校验表头
         // 1. 取文件 & 读取字典（库位映射）
         MultipartFile file = FileUtil.getFile(request);
@@ -150,18 +270,32 @@ public class MesItemStockServiceImpl extends ServiceImpl<MesItemStockMapper, Mes
         // 6. 写入
         this.saveBatch(toAdd);
 
-        // 7. 更新 mid_item_stock（BOM 类型）
-        for (MesItemStock mis: toAdd) {
+        // 7. 更新 mid_item_stock（仅 BOM 类型）
+        for (MesItemStock mis : toAdd) {
             if ("01".equals(mis.getItemType())) {
-                midItemStockService.selectStock(Collections.singletonList(mis.getItemNo()))
-                        .get(mis.getItemNo())
-                        .setInitialCount(mis.getItemCount());
-                midItemStockService.updateById(
-                        midItemStockService.selectStock(Collections.singletonList(mis.getItemNo()))
-                                .get(mis.getItemNo())
-                );
+                // 一次调用，避免重复查询
+                Map<String, MidItemStock> midMap =
+                        midItemStockService.selectStock(Collections.singletonList(mis.getItemNo()));
+                MidItemStock mid = midMap.get(mis.getItemNo());
+
+                if (mid == null) {
+                    // 如果你期望“若不存在则新增”，可以在这里插入新纪录：
+                    // mid = new MidItemStock();
+                    // mid.setItemNo(mis.getItemNo());
+                    // mid.setInitialCount(mis.getItemCount());
+                    // midItemStockService.save(mid);
+                    // continue;
+
+                    // 或者简单跳过，不报错
+                    continue;
+                }
+
+                // 安全地更新数量
+                mid.setInitialCount(mis.getItemCount());
+                midItemStockService.updateById(mid);
             }
         }
+
     }
 
 

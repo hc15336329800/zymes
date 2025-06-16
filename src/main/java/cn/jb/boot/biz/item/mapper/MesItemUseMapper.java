@@ -1,8 +1,11 @@
 package cn.jb.boot.biz.item.mapper;
 
+import cn.jb.boot.biz.item.dto.UseItemTreeRow;
+import cn.jb.boot.biz.item.entity.BomUsed;
 import cn.jb.boot.biz.item.entity.MesItemStock;
 import cn.jb.boot.biz.item.entity.MesItemUse;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import io.lettuce.core.dynamic.annotation.Param;
 
 import java.util.List;
 
@@ -15,6 +18,11 @@ import java.util.List;
  * @since 2023-12-28 16:55:58
  */
 public interface MesItemUseMapper extends BaseMapper<MesItemUse> {
+
+
+
+
+
 
     /**
      * 根据条件分页查询产品用料表列表

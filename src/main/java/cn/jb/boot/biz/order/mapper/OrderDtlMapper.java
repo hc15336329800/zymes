@@ -29,6 +29,7 @@ public interface OrderDtlMapper extends BaseMapper<OrderDtl> {
 
 
 
+
     // -----------------------------------------------------------查询t_order_dtl明细   订单分组-------------------------------------------------------
 
     // ① 统计组数（Distinct order_no）
@@ -42,6 +43,12 @@ public interface OrderDtlMapper extends BaseMapper<OrderDtl> {
     // ③ 取整组明细
     List<OrderDtlPageResponse> selectDetailsByOrderNos(@Param("orderNos") List<String> orderNos);
 
+
+//使用树替代组
+ List<OrderDtlPageResponse> selectDtlWithItemAndTopBomByOrderNos(
+         @Param("orderNos") List<String> orderNos,
+         @Param("dto") OrderDtlPageRequest dto
+ );
 
     // -------------------------------------------------------------------------------------------------------------
 

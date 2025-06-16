@@ -24,6 +24,10 @@ import java.util.Set;
  */
 public interface MesItemUseService extends IService<MesItemUse> {
 
+
+    /** bom树构造器  （  将 List<BomUsed> list  + String root   构建为前端树结构） */
+    UseItemTreeResp itemUseTreeNew(ItemNoRequest params);
+
     void export(HttpServletResponse response, String id);
 
 
