@@ -27,6 +27,15 @@ public class MesProcedure extends BaseEntity {
 
     private static final long serialVersionUID = 1L;
 
+
+    /**
+     * bom编码
+     */
+    @Schema(description = "bom编码")
+    @TableField("bom_no")
+    private String bomNo;
+
+
     /**
      * 主键
      */

@@ -34,5 +34,21 @@
         </foreach>
     </update>
 
+    <!--===============================工序==================================-->
+
+    <!-- 拉取ERP工序路由（只同步未同步的） -->
+    <select id="bomRouter" resultType="java.util.Map">
+        SELECT * FROM JSPBOMROUTER WHERE BYTSTATUS = 0
+    </select>
+
+    <!-- 回写同步状态 -->
+    <update id="routerUpdate">
+        UPDATE JSPBOMROUTER SET BYTSTATUS = 1 WHERE LNGBOMID IN
+        <foreach item="id" collection="routerIdList" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+
 
 </mapper>

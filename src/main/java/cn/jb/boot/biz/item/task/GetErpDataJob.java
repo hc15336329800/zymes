@@ -47,13 +47,17 @@ public class GetErpDataJob {
 
 
 
-		log.info("开始加载BOM用料...");
-		System.out.println("info:  BOM用料 ，频率一分钟");
-		int  cc1 = mesToErpDataService.syncBomTree();
-		System.out.println("info:  BOM用料同步结束, 同步数量："+cc1 +"条");
-		log.info("加载BOM用料完成...cost:{}", System.currentTimeMillis() - start);
+//		log.info("开始加载BOM用料...");
+//		System.out.println("info:  BOM用料 ，频率一分钟");
+//		int  cc1 = mesToErpDataService.syncBomTree();
+//		System.out.println("info:  BOM用料同步结束, 同步数量："+cc1 +"条");
+//		log.info("加载BOM用料完成...cost:{}", System.currentTimeMillis() - start);
 
-
+		log.info("开始加载BOM工序...");
+		System.out.println("info: BOM工序 ，频率一分钟");
+		int  cc1 = mesToErpDataService.syncProcedure();
+		System.out.println("info:  BOM工序同步结束, 同步数量："+cc1 +"条");
+		log.info("加载BOM工序完成...cost:{}", System.currentTimeMillis() - start);
 
 		startTime = DateUtil.formatDateTime(LocalDateTime.now());
 

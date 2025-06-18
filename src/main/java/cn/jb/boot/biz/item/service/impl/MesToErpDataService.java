@@ -3,10 +3,12 @@ package cn.jb.boot.biz.item.service.impl;
 import cn.jb.boot.biz.agvcar.mapper.BomManageInfoMapper;
 import cn.jb.boot.biz.item.entity.MesItemStock;
 import cn.jb.boot.biz.item.entity.MesItemUse;
+import cn.jb.boot.biz.item.entity.MesProcedure;
 import cn.jb.boot.biz.item.enums.ItemType;
 import cn.jb.boot.biz.item.mapper.MesToErpDataMapper;
 import cn.jb.boot.biz.item.service.MesItemStockService;
 import cn.jb.boot.biz.item.service.MesItemUseService;
+import cn.jb.boot.biz.item.service.MesProcedureService;
 import com.baomidou.dynamic.datasource.annotation.DS;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -16,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
-import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -41,6 +42,9 @@ public class MesToErpDataService {
 	@Autowired
 	private MesToErpDataMapper mesToErpDataMapper;
 
+	@Autowired
+	private MesProcedureService mesProcedureService;
+
 
 //=====================================map中切换数据源=========================================
 
@@ -48,7 +52,7 @@ public class MesToErpDataService {
 	/**
 	 * 物料同步 V2.0
 	 * 仅同步 ERP（JSPMATERIAL）表 BYTSTATUS=0 的物料数据，完成后将 BYTSTATUS 置为 1。
-	 *  拉取数据、回写都走 Mapper（Oracle），
+	 * 拉取数据、回写都走 Mapper（Oracle），
 	 */
 //	@Transactional(rollbackFor = Exception.class)   跨库不能使用事务！
 	public int syncItemStock() {
@@ -159,10 +163,10 @@ public class MesToErpDataService {
 	}
 
 
-
 	/**
 	 * bom同步 V1.0
 	 * 仅同步 ERP（JSPBOM）表 BYTSTATUS=0 的BOM用料树
+	 *
 	 * @return 同步数量
 	 */
 	public int syncBomTree() {
@@ -231,21 +235,443 @@ public class MesToErpDataService {
 			List<Integer> subIds = bomIdList.subList(i, Math.min(i + batch, bomIdList.size()));
 			mesToErpDataMapper.bomUpdate(subIds);
 		}
-		log.info("【警告】BOM用料同步完成，同步数={}", saveList.size());
+ 		log.info("【警告】BOM用料同步完成，同步数={}", saveList.size());
+		return saveList.size();
+	}
+
+
+	/**
+	 * 工序同步 V1.1
+	 *使用bomNo索引
+	 * 同步ERP工序表（JSPBOMROUTER）到MES工序表（mes_procedure）。
+	 * 只同步ERP端 BYTSTATUS=0 的工序数据（未同步/有变更），同步完成后回写BYTSTATUS=1。
+	 * 唯一性判定：bom_no（对应STRBOMCODE）+ procedure_code（对应STRROUTECODE）。
+	 */
+	public int syncProcedure() {
+		// 1. 拉取ERP侧待同步（BYTSTATUS=0）的工序数据
+		List<Map<String, Object>> erpRouterList = mesToErpDataMapper.bomRouter();
+		if (erpRouterList == null || erpRouterList.isEmpty()) {
+			log.info("ERP工序数据为空, 不做同步");
+			return 0;
+		}
+
+		List<Integer> routerIdList = new ArrayList<>();
+		List<MesProcedure> saveList = new ArrayList<>();
+		LocalDateTime now = LocalDateTime.now();
+
+		for (Map<String, Object> row : erpRouterList) {
+			// 记录ERP工序ID（LNGBOMID），用于批量回写状态
+			routerIdList.add(Integer.valueOf(row.get("LNGBOMID").toString()));
+
+			// 1. 唯一性判定：bom_no + procedure_code
+			String bomNo = row.get("STRBOMCODE").toString();
+			String procedureCode = row.get("STRROUTECODE").toString();
+			LambdaQueryWrapper<MesProcedure> qw = new LambdaQueryWrapper<MesProcedure>()
+					.eq(MesProcedure::getBomNo, bomNo)
+					.eq(MesProcedure::getProcedureCode, procedureCode);
+			MesProcedure exist = mesProcedureService.getOne(qw, false);
+
+			// 2. 新增或更新实体
+			MesProcedure p = exist != null ? exist : new MesProcedure();
+			if (p.getId() == null) {
+				p.setId(UUID.randomUUID().toString().replace("-", ""));
+				p.setCreatedBy("1");
+				p.setCreatedTime(now);
+			}
+			p.setBomNo(bomNo); // 【修正点】存STRBOMCODE到bom_no字段
+			p.setProcedureCode(procedureCode); // 工序编码
+			p.setSeqNo(Integer.valueOf(row.get("LNGORDER").toString())); // 顺序号
+			p.setProcedureName(row.get("STRROUTENAME").toString()); // 工序名称
+
+			// 工时字段映射
+			String time = row.get("DBLROUTERATIONTIME") == null ? "0" : row.get("DBLROUTERATIONTIME").toString();
+			p.setHoursFixed(new BigDecimal(time));
+
+			String processTime = row.get("DBLROUTEPROCESSTIME") == null ? "0" : row.get("DBLROUTEPROCESSTIME").toString();
+			p.setHoursWork(new BigDecimal(processTime));
+
+			String prepTime = row.get("DBLROUTEPREPARETIME") == null ? "0" : row.get("DBLROUTEPREPARETIME").toString();
+			p.setHoursPrepare(new BigDecimal(prepTime));
+
+			// 部门、设备
+			String deptName = row.get("STRDEPARTMENTNAME") == null ? "" : row.get("STRDEPARTMENTNAME").toString();
+			p.setDeptId("制造部".equals(deptName) ? "312905765054574592" : "316142126431625216");
+			p.setDeviceId(getDeviceName(procedureCode)); // 【原逻辑】
+
+			// 更新时间与更新人
+			p.setUpdatedBy("1");
+			p.setUpdatedTime(now);
+
+			saveList.add(p);
+		}
+
+		// 3. 批量保存/更新
+		if (!saveList.isEmpty()) {
+			mesProcedureService.saveOrUpdateBatch(saveList);
+		}
+
+		// 4. 回写ERP工序表同步状态
+		if (!routerIdList.isEmpty()) {
+			mesToErpDataMapper.routerUpdate(routerIdList);
+		}
+
+		log.info("工序同步完成, 本次同步: {} 条", saveList.size());
+		return saveList.size();
+	}
+
+
+	/**
+	 * 工序同步 V1.0
+	 *  使用ItemNo索引  并且没有使用BYTSTATUS=0  ，而是使用的全局对比
+	 * @return
+	 */
+	public int syncProcedureItemNo() {
+		// 1. 拉取ERP侧待同步的工序数据
+		List<Map<String, Object>> erpRouterList = mesToErpDataMapper.bomRouter();
+		if (erpRouterList == null || erpRouterList.isEmpty()) {
+			log.info("ERP工序数据为空, 不做同步");
+			return 0;
+		}
+
+		// 用于批量回写ERP的BOM工序ID集合
+		List<Integer> routerIdList = new ArrayList<>();
+		// MES侧待保存/更新的工序实体集合
+		List<MesProcedure> saveList = new ArrayList<>();
+
+		for (Map<String, Object> row : erpRouterList) {
+			// ERP工序明细表主键LNGBOMID，后续用于ERP同步状态回写
+			routerIdList.add(Integer.valueOf(row.get("LNGBOMID").toString()));
+
+			// 1. 获取产品item_no（通常ERP的STRBOMCODE即MES的item_no）
+			String itemNo = row.get("STRBOMCODE").toString();
+
+			// 2. 工序唯一性判断：item_no+procedure_code唯一
+			String procedureCode = row.get("STRROUTECODE").toString();
+			LambdaQueryWrapper<MesProcedure> qw = new LambdaQueryWrapper<MesProcedure>()
+					.eq(MesProcedure::getItemNo, itemNo)
+					.eq(MesProcedure::getProcedureCode, procedureCode);
+			// getOne(qw, false)：只要有一个返回，不会抛异常
+			MesProcedure exist = mesProcedureService.getOne(qw, false);
+
+			// 如果存在则复用，否则新建
+			// - 幂等同步，避免重复插入
+			MesProcedure p = exist != null ? exist : new MesProcedure();
+			if (p.getId() == null) {
+				// 主键赋值
+				p.setId(UUID.randomUUID().toString().replace("-", ""));
+				// 创建人、创建时间赋值
+				p.setCreatedBy("1");
+				p.setCreatedTime(LocalDateTime.now());
+			}
+			// 基础字段赋值
+			p.setItemNo(itemNo); // 产品编码
+			p.setSeqNo(Integer.valueOf(row.get("LNGORDER").toString())); // ERP工序顺序号
+			p.setProcedureCode(procedureCode); // ERP工序编码
+			p.setProcedureName(row.get("STRROUTENAME").toString()); // ERP工序名称
+
+			// 加工工时(DBLROUTERATIONTIME) → hoursFixed
+			String time = row.get("DBLROUTERATIONTIME") == null ? "0" : row.get("DBLROUTERATIONTIME").toString();
+			p.setHoursFixed(new BigDecimal(time));
+
+			// 工作工时(DBLROUTEPROCESSTIME) → hoursWork
+			String processTime = row.get("DBLROUTEPROCESSTIME") == null ? "0" : row.get("DBLROUTEPROCESSTIME").toString();
+			p.setHoursWork(new BigDecimal(processTime));
+
+			// 准备工时(DBLROUTEPREPARETIME) → hoursPrepare
+			String prepTime = row.get("DBLROUTEPREPARETIME") == null ? "0" : row.get("DBLROUTEPREPARETIME").toString();
+			p.setHoursPrepare(new BigDecimal(prepTime));
+
+			// 部门映射（制造部/其他）
+			String deptName = row.get("STRDEPARTMENTNAME") == null ? "" : row.get("STRDEPARTMENTNAME").toString();
+			p.setDeptId("制造部".equals(deptName) ? "312905765054574592" : "316142126431625216");
+
+			// 设备编码（通过工序code反查，实际请根据业务重写）
+			p.setDeviceId(getDeviceName(row.get("STRROUTECODE").toString()));
+
+			// 更新时间与更新人
+			p.setUpdatedBy("1");
+			p.setUpdatedTime(LocalDateTime.now());
+			saveList.add(p);
+		}
+
+		// 3. 批量保存/更新到MES工序表
+		if (!saveList.isEmpty()) {
+			mesProcedureService.saveOrUpdateBatch(saveList);
+		}
+
+		// 4. 同步成功后批量回写ERP工序表的同步状态
+		if (!routerIdList.isEmpty()) {
+			mesToErpDataMapper.routerUpdate(routerIdList);
+		}
+
+		log.info("工序同步完成, 本次同步: {} 条", saveList.size());
 		return saveList.size();
 	}
 
 
 
+	//====================================需要整改！=========================================
 
 
-
-
-
-
-
-
-
+	// 写死的设备映射表！！
+	private String getDeviceName(String procedureCode) {
+		String resultValue = "";
+		switch (procedureCode) {
+			case "1":
+				resultValue = "424949962023788544";
+				break;
+			case "2":
+				resultValue = "424859821687070720";
+				break;
+			case "3":
+				resultValue = "424949962023788544";
+				break;
+			case "4":
+				resultValue = "424949846894338048";
+				break;
+			case "5":
+				resultValue = "424950828344696832";
+				break;
+			case "8":
+				resultValue = "424871737725706240";
+				break;
+			case "10":
+				resultValue = "424860069373304832";
+				break;
+			case "11":
+				resultValue = "424860069373304832";
+				break;
+			case "12":
+				resultValue = "424859913508773888";
+				break;
+			case "13":
+				resultValue = "425242411535327232";
+				break;
+			case "14":
+				resultValue = "424950493689569280";
+				break;
+			case "16":
+				resultValue = "424951176589369344";
+				break;
+			case "19":
+				resultValue = "424859994123296768";
+				break;
+			case "22":
+				resultValue = "424859821687070720";
+				break;
+			case "23":
+				resultValue = "424859994123296768";
+				break;
+			case "24":
+				resultValue = "424960035571785728";
+				break;
+			case "25":
+				resultValue = "424951282155806720";
+				break;
+			case "26":
+				resultValue = "424973040892141568";
+				break;
+			case "27":
+				resultValue = "425239381603672064";
+				break;
+			case "28":
+				resultValue = "424973656825683968";
+				break;
+			case "29":
+				resultValue = "424974103321927680";
+				break;
+			case "30":
+				resultValue = "424974103321927680";
+				break;
+			case "31":
+				resultValue = "424859706293379072";
+				break;
+			case "32":
+				resultValue = "424950640133693440";
+				break;
+			case "34":
+				resultValue = "424860069373304832";
+				break;
+			case "37":
+				resultValue = "424859913508773888";
+				break;
+			case "38":
+				resultValue = "424950120539119616";
+				break;
+			case "39":
+				resultValue = "424950346687602688";
+				break;
+			case "40":
+				resultValue = "424859706293379072";
+				break;
+			case "42":
+				resultValue = "424859994123296768";
+				break;
+			case "43":
+				resultValue = "424950120539119616";
+				break;
+			case "61":
+				resultValue = "424859913508773888";
+				break;
+			case "63":
+				resultValue = "424974103321927680";
+				break;
+			case "64":
+				resultValue = "424950740994121728";
+				break;
+			case "65":
+				resultValue = "424950932417961984";
+				break;
+			case "67":
+				resultValue = "424950740994121728";
+				break;
+			case "81":
+				resultValue = "424950932417961984";
+				break;
+			case "84":
+				resultValue = "424859913508773888";
+				break;
+			case "87":
+				resultValue = "424949962023788544";
+				break;
+			case "88":
+				resultValue = "424859821687070720";
+				break;
+			case "90":
+				resultValue = "424951108410957824";
+				break;
+			case "98":
+				resultValue = "424951176589369344";
+				break;
+			case "99":
+				resultValue = "424979166555693056";
+				break;
+			case "100":
+				resultValue = "424949505515741184";
+				break;
+			case "112":
+				resultValue = "424859706293379072";
+				break;
+			case "113":
+				resultValue = "424983016339562496";
+				break;
+			case "114":
+				resultValue = "424973040892141568";
+				break;
+			case "115":
+				resultValue = "424951282155806720";
+				break;
+			case "116":
+				resultValue = "424974103321927680";
+				break;
+			case "117":
+				resultValue = "424859994123296768";
+				break;
+			case "118":
+				resultValue = "424859994123296768";
+				break;
+			case "122":
+				resultValue = "424951108410957824";
+				break;
+			case "123":
+				resultValue = "424974103321927680";
+				break;
+			case "126":
+				resultValue = "424859913508773888";
+				break;
+			case "128":
+				resultValue = "424859913508773888";
+				break;
+			case "134":
+				resultValue = "424859913508773888";
+				break;
+			case "135":
+				resultValue = "424948342544293888";
+				break;
+			case "137":
+				resultValue = "424860069373304832";
+				break;
+			case "138":
+				resultValue = "424859913508773888";
+				break;
+			case "140":
+				resultValue = "424860069373304832";
+				break;
+			case "141":
+				resultValue = "424859913508773888";
+				break;
+			case "142":
+				resultValue = "424859994123296768";
+				break;
+			case "150":
+				resultValue = "424950932417961984";
+				break;
+			case "152":
+				resultValue = "424950493689569280";
+				break;
+			case "156":
+				resultValue = "424860069373304832";
+				break;
+			case "159":
+				resultValue = "424860069373304832";
+				break;
+			case "163":
+				resultValue = "424860069373304832";
+				break;
+			case "165":
+				resultValue = "424859994123296768";
+				break;
+			case "166":
+				resultValue = "424974103321927680";
+				break;
+			case "167":
+				resultValue = "424950493689569280";
+				break;
+			case "200":
+				resultValue = "424950493689569280";
+				break;
+			case "205":
+				resultValue = "424950932417961984";
+				break;
+			case "206":
+				resultValue = "424950932417961984";
+				break;
+			case "215":
+				resultValue = "424974103321927680";
+				break;
+			case "216":
+				resultValue = "424951176589369344";
+				break;
+			case "217":
+				resultValue = "424860069373304832";
+				break;
+			case "218":
+				resultValue = "424859913508773888";
+				break;
+			case "219":
+				resultValue = "424859821687070720";
+				break;
+			case "259":
+				resultValue = "424859913508773888";
+				break;
+			case "273":
+				resultValue = "424950828344696832";
+				break;
+			case "297":
+				resultValue = "424859821687070720";
+				break;
+			case "309":
+				resultValue = "424859994123296768";
+				break;
+			case "310":
+				resultValue = "424950493689569280";
+				break;
+			case "311":
+				resultValue = "424974103321927680";
+				break;
+		}
+		return resultValue;
+	}
 
 
 	//=====================================服务中切换数据源   下下策=========================================

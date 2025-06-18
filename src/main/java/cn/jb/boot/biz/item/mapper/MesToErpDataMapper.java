@@ -34,4 +34,15 @@ public interface MesToErpDataMapper {
 
 	// 批量回写ERP同步标记
 	void bomUpdate(@Param("idList") List<Integer> idList);
+
+	//===============================工序==================================
+
+	/** 拉取ERP工序表未同步（BYTSTATUS=0）的全部数据 */
+	List<Map<String, Object>> bomRouter();
+
+	/** 根据工序ID批量回写同步状态为已同步 */
+	void routerUpdate(@Param("routerIdList") List<Integer> routerIdList);
+
+
+
 }
