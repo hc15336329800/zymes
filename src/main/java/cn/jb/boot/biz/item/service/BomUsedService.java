@@ -21,6 +21,7 @@ public interface BomUsedService extends IService<BomUsed> {
 
     Map<String, List<BomUsed>> getBomDepend(List<String> itemNos);
 
+    void load(String startTime);
 
     /**
      * 加载bom的数据

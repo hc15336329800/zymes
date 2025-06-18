@@ -25,6 +25,8 @@ import java.util.Set;
 public interface MesItemUseService extends IService<MesItemUse> {
 
 
+    void useDateFromErp(Set<String> items);
+
     /** bom树构造器  （  将 List<BomUsed> list  + String root   构建为前端树结构） */
     UseItemTreeResp itemUseTreeNew(ItemNoRequest params);
 

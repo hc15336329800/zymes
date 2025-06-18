@@ -97,6 +97,23 @@ public class MesItemUseServiceImpl extends ServiceImpl<MesItemUseMapper, MesItem
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     @Override
+    @Transactional(rollbackFor = Throwable.class)
+    public void useDateFromErp(Set<String> items) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                ThreadPool.commonExecute(() -> {
+                    List<String> list = new ArrayList<>();
+                    for (String itemNo : items) {
+                        SpringContextUtil.getBeanByClass(BomUsedService.class).loadParBomData(itemNo, list);
+                    }
+                });
+            }
+        });
+    }
+
+
+    @Override
     public UseItemTreeResp itemUseTree(ItemNoRequest params) {
         //用料树
         List<BomUsed> list = bomUsedService.tree(params.getItemNo());

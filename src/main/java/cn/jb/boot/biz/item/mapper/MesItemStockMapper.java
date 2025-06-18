@@ -57,4 +57,7 @@ public interface MesItemStockMapper extends BaseMapper<MesItemStock> {
 
     @InterceptorIgnore(blockAttack = "true")
     int deleteBomData();
+
+    List<MesItemStock> selectBoms(@Param("startTime") String startTime);
+
 }

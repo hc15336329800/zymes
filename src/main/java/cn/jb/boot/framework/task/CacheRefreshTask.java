@@ -48,9 +48,9 @@ public class CacheRefreshTask implements CommandLineRunner {
 
     @Scheduled(cron = "0 0/30 * * * ?")
     public void initData() {
-        log.info("定时刷新缓存");
-        System.out.println("info:  定时刷新缓存开始  装载字典（频率30分钟）");
-        run();
+        log.info("定时刷新缓存  暂时停止  请手动打开");
+        System.out.println("info:  定时刷新缓存开始  装载字典（频率30分钟） 暂时停止  请手动打开");
+        //run();
     }
 
     @Override

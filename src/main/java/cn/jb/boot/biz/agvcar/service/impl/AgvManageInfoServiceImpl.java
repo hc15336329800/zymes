@@ -10,9 +10,13 @@ import cn.jb.boot.biz.item.entity.DeviceLocationInfo;
 import cn.jb.boot.biz.item.entity.MesItemStock;
 import cn.jb.boot.biz.item.entity.MesItemUse;
 import cn.jb.boot.biz.item.entity.MesProcedure;
+import cn.jb.boot.biz.item.enums.ItemType;
 import cn.jb.boot.biz.item.mapper.DeviceLocationMapper;
 import cn.jb.boot.biz.item.mapper.MesItemStockMapper;
 import cn.jb.boot.biz.item.service.DeviceLocationService;
+import cn.jb.boot.biz.item.service.MesItemStockService;
+import cn.jb.boot.biz.item.service.MesItemUseService;
+import cn.jb.boot.biz.item.service.MesProcedureService;
 import cn.jb.boot.biz.item.service.impl.MesItemUseServiceImpl;
 import cn.jb.boot.biz.item.service.impl.MesProcedureServiceImpl;
 import cn.jb.boot.biz.item.vo.request.MesItemUsedUploadRequest;
@@ -29,6 +33,7 @@ import org.springframework.stereotype.Service;;
 import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * AGV叉车信息
@@ -55,6 +60,14 @@ public class AgvManageInfoServiceImpl extends ServiceImpl<AgvManageInfoMapper, A
     DeviceLocationMapper deviceLocationMapper;
     @Autowired
     DeviceLocationService deviceLocationService;
+    @Resource
+    private MesItemStockService mesItemStockService;
+    @Resource
+    private MesItemUseService mesItemUseService;
+    @Resource
+    private MesProcedureService mesProcedureService;
+
+
     @Resource
     private MesItemUseServiceImpl mesItemUseServiceImpl;
     @Resource
@@ -132,12 +145,18 @@ public class AgvManageInfoServiceImpl extends ServiceImpl<AgvManageInfoMapper, A
         }
         return result;
     }
-    @Override
-    public List<Map<String, Object>> bomInfo() {
-        //删除数据
+
+
+    /**
+     * 从 ERP/BOM 系统同步物料基础数据到 mes_item_stock 表中  ?    错误的旧版本
+     * @return
+     */
+    public List<Map<String, Object>> bomInfo_err() {
+        // 1. 清空原有数据（四张表）
         mesItemStockMapper.deleteBomData();
-        //物料基础数据
+        // 2. 从 ERP 获取原始物料数据
         List<Map<String, Object>> jspMaterialList = bomManageInfoMapper.materialMessage();
+        // 3. 遍历 ERP 数据，构造物料对象写入 mes_item_stock
         for(Map<String,Object> jspMaterialMap:jspMaterialList){
             Map<String,Object> itemStock = new HashMap<>();
             //获取32位随机数作为主键
@@ -185,105 +204,15 @@ public class AgvManageInfoServiceImpl extends ServiceImpl<AgvManageInfoMapper, A
             itemStock.put("createdTime", DateUtil.nowDateTime());
             itemStock.put("updatedBy","1");
             itemStock.put("updatedTime",DateUtil.nowDateTime());
-            mesItemStockMapper.insertItemStock(itemStock);
+            mesItemStockMapper.insertItemStock(itemStock); // 插入单条数据
         }
-        //物料基础数据
-//        List<Map<String, Object>> jspReceiptList = bomManageInfoMapper.receiptMessage();
-//        for(Map<String, Object> jspReceiptMap:jspReceiptList){
-//            Map<String,Object> itemStock = new HashMap<>();
-//            //获取32位随机数作为主键
-//            UUID uuid = UUID.randomUUID();
-//            String randomCode = uuid.toString().replace("-", "");
-//            itemStock.put("id",randomCode.substring(0, 32));
-//            //物品编码
-//            String strItemCode = jspReceiptMap.get("LNGITEMID").toString();
-//            itemStock.put("itemNo",strItemCode);
-//            //物品名称
-//            String strItemName = jspReceiptMap.get("STRITEMNAME").toString();
-//            itemStock.put("itemName",strItemName);
-//            //规格型号
-//            String strItemStyle = jspReceiptMap.get("STRITEMSTYLE") == null?"":jspReceiptMap.get("STRITEMSTYLE").toString();
-//            itemStock.put("itemModel",strItemStyle);
-//            //图纸号
-//            String strBomCode = "";
-//            itemStock.put("bomNo",strBomCode);
-//            //计量单位
-//            String strUnitName = jspReceiptMap.get("STRUNITNAME").toString();
-//            itemStock.put("itemMeasure",strUnitName);
-//            //数量
-//            String strCount = jspReceiptMap.get("DBLQUANTITY").toString();
-//            itemStock.put("itemCount",strCount);
-//            itemStock.put("erpCount","0");
-//            //来源（自制或采购）
-//            String strFrom = "采购";
-//            itemStock.put("itemOrigin",strFrom);
-//            //辅助数量
-//            String strDBCount = "0";
-//            itemStock.put("itemCountAssist",strDBCount);
-//            itemStock.put("itemType","00");
-//            //辅助计量单位
-//            String strdbUnit = jspReceiptMap.get("STRUNITNAME").toString();
-//            itemStock.put("itemMeasureAssist",strdbUnit);
-//            itemStock.put("isValid","01");
-//            itemStock.put("createdBy","1");
-//            itemStock.put("createdTime", DateUtil.nowDateTime());
-//            itemStock.put("updatedBy","1");
-//            itemStock.put("updatedTime",DateUtil.nowDateTime());
-//            mesItemStockMapper.insertItemStock(itemStock);
-//        }
+
         //bom基础数据
         List<Map<String, Object>> jspBomList = bomManageInfoMapper.bomMessage();
         List<String> bomId = new ArrayList<>();
         List<MesItemUsedUploadRequest> list = new ArrayList<>();
         List<Map<String,Object>> itemList = new ArrayList<>();
-//        for(Map<String, Object> jspBomMap:jspBomList){
-//            Map<String,Object> itemStock = new HashMap<>();
-//            String strBomCode = jspBomMap.get("STRBOMCODE").toString();
-//            if(bomId.contains(strBomCode)){
-//                continue;
-//            }else{
-//                bomId.add(strBomCode);
-//            }
-//            String strItemCode = jspBomMap.get("STRITEMCODE").toString();
-//            //获取32位随机数作为主键
-//            UUID uuid = UUID.randomUUID();
-//            String randomCode = uuid.toString().replace("-", "");
-//            itemStock.put("id",randomCode.substring(0, 32));
-//            //物品编码
-//            itemStock.put("itemNo",strItemCode);
-//            //物品名称
-//            String strItemName = jspBomMap.get("STRITEMNAME").toString();
-//            itemStock.put("itemName",strItemName);
-//            //规格型号
-//            String strItemStyle = jspBomMap.get("STRITEMSTYLE") == null?"":jspBomMap.get("STRITEMSTYLE").toString();
-//            itemStock.put("itemModel",strItemStyle);
-//            //图纸号
-//            itemStock.put("bomNo",strBomCode);
-//            //计量单位
-//            String strUnitName = jspBomMap.get("STRUNITNAME").toString();
-//            itemStock.put("itemMeasure",strUnitName);
-//            //数量
-//            String strCount = jspBomMap.get("DBLQUANTITY").toString();
-//            itemStock.put("itemCount",strCount);
-//            itemStock.put("erpCount","0");
-//            //来源（自制或采购）
-//            String strFrom = "自制";
-//            itemStock.put("itemOrigin",strFrom);
-//            itemStock.put("itemType","01");
-//            //辅助数量
-//            String strDBCount = "0";
-//            itemStock.put("itemCountAssist",strDBCount);
-//
-//            //辅助计量单位
-//            String strdbUnit = jspBomMap.get("STRUNITNAME").toString();
-//            itemStock.put("itemMeasureAssist",strdbUnit);
-//            itemStock.put("isValid","01");
-//            itemStock.put("createdBy","1");
-//            itemStock.put("createdTime", DateUtil.nowDateTime());
-//            itemStock.put("updatedBy","1");
-//            itemStock.put("updatedTime",DateUtil.nowDateTime());
-//            mesItemStockMapper.insertItemStock(itemStock);
-//        }
+
         //用料
         for(Map<String, Object> jspBom:jspBomList){
             String strItemCode = jspBom.get("STRITEMCODE").toString();
@@ -352,6 +281,245 @@ public class AgvManageInfoServiceImpl extends ServiceImpl<AgvManageInfoMapper, A
         mesProcedureServiceImpl.insertItemProcedure(stockList);
         return jspMaterialList;
     }
+
+
+
+    /**
+     * 从 ERP/BOM 系统同步物料基础数据到 mes_item_stock 表中  ?    错误的旧版本
+     * @return
+     */    @Override
+    public List<Map<String, Object>> bomInfo() {
+        List<Map<String, Object>> jspMaterialList = new ArrayList<>();
+        try{
+            System.out.println("开始同步物料档案");
+            //物料基础数据
+            jspMaterialList = bomManageInfoMapper.materialMessage();
+            List<MesItemStock> mesItemStockList = new ArrayList<>();
+            List<String> itemLists = new ArrayList<>();
+            for(Map<String,Object> jspMaterialMap:jspMaterialList){
+                MesItemStock itemStock = new MesItemStock();
+                //物品编码
+                String strItemCode = jspMaterialMap.get("STRITEMCODE").toString();
+                itemStock.setItemNo(strItemCode);
+                itemLists.add(strItemCode);
+                //主键
+                List<String> itemNos = new ArrayList<>();
+                itemNos.add(strItemCode);
+                Map<String,MesItemStock> mesItemStockLists = mesItemStockService.getByItemNos(itemNos);
+                if(mesItemStockLists != null && mesItemStockLists.size() != 0){
+                    MesItemStock mesItemStock = mesItemStockLists.get(strItemCode);
+                    itemStock.setId(mesItemStock.getId());
+                }else{
+                    //获取32位随机数作为主键
+                    UUID uuid = UUID.randomUUID();
+                    String randomCode = uuid.toString().replace("-", "");
+                    itemStock.setId(randomCode.substring(0, 32));
+                }
+                //物品名称
+                String strItemName = jspMaterialMap.get("STRITEMNAME").toString();
+                itemStock.setItemName(strItemName);
+                //规格型号
+                String strItemStyle = jspMaterialMap.get("STRITEMSTYLE") == null?"":jspMaterialMap.get("STRITEMSTYLE").toString();
+                itemStock.setItemModel(strItemStyle);
+                //计量单位
+                String strUnitName = jspMaterialMap.get("STRUNITNAME").toString();
+                itemStock.setItemMeasure(strUnitName);
+                //数量
+                BigDecimal strCount = new BigDecimal(0);
+                itemStock.setItemCount(strCount);
+                itemStock.setErpCount(strCount);
+                //来源（自制或采购）
+                String strFrom = jspMaterialMap.get("BYTSOURCE").toString();
+                itemStock.setItemOrigin(strFrom);
+                if(strFrom.equals("0")){
+                    itemStock.setItemType("00");
+                    itemStock.setBomNo("");
+                }else{
+                    itemStock.setItemType("01");
+                    itemStock.setBomNo(strItemStyle);
+                }
+                //辅助数量
+                BigDecimal strDBCount = new BigDecimal(0);
+                itemStock.setItemCountAssist(strDBCount);
+                //辅助计量单位
+                String strdbUnit = jspMaterialMap.get("STRUNITNAME").toString();
+                itemStock.setItemMeasureAssist(strdbUnit);
+                itemStock.setIsValid("01");
+                itemStock.setCreatedBy("1");
+                itemStock.setCreatedTime(DateUtil.nowDateTime());
+                itemStock.setUpdatedBy("1");
+                itemStock.setUpdatedTime(DateUtil.nowDateTime());
+                mesItemStockList.add(itemStock);
+            }
+            if(mesItemStockList != null && mesItemStockList.size() != 0){
+                mesItemStockService.saveOrUpdateBatch(mesItemStockList);
+            }
+            Integer times = itemLists.size()/1000;
+            if(itemLists.size()%1000 != 0){
+                times = times +1;
+            }
+            for(int i=1;i<=times;i++){
+                List<String> datas = new ArrayList<>();
+                if(i == times){
+                    datas = itemLists.subList((i-1)*1000,itemLists.size());
+                }else{
+                    datas = itemLists.subList((i-1)*1000,i*1000);
+                }
+                if(datas.size() != 0){
+                    bomManageInfoMapper.materUpdate(datas);
+                }
+            }
+
+
+
+
+            System.out.println("开始同步用料数据");
+            //用料数据
+            List<Map<String, Object>> jspBomList = bomManageInfoMapper.bomMessage();
+            List<MesItemUse> list = new ArrayList<>();
+            //用料
+            List<Integer> bomIdList = new ArrayList<>();
+            for(Map<String, Object> jspBom:jspBomList){
+                bomIdList.add(Integer.valueOf(jspBom.get("LNGBOMID").toString()));
+                MesItemUse mesItemUse = new MesItemUse();
+                //产品编码
+                String strItemCode = jspBom.get("STRITEMCODE").toString();
+                mesItemUse.setItemNo(strItemCode);
+                //用料编码
+                String strNexItemCode = jspBom.get("STRNEXTITEMCODE").toString();
+                mesItemUse.setUseItemNo(strNexItemCode);
+                List<MesItemUse> mesItemUseList = mesItemUseService.list(new LambdaQueryWrapper<MesItemUse>().eq(MesItemUse::getItemNo, strItemCode).eq(MesItemUse::getUseItemNo,strNexItemCode));
+                if(mesItemUseList != null && mesItemUseList.size() != 0){
+                    mesItemUse.setId(mesItemUseList.get(0).getId());
+                }else{
+                    //获取32位随机数作为主键
+                    UUID uuid = UUID.randomUUID();
+                    String randomCode = uuid.toString().replace("-", "");
+                    mesItemUse.setId(randomCode.substring(0, 32));
+                }
+                //用料量
+                String strCount = jspBom.get("DBLQUANTITY").toString();
+                BigDecimal strCountBig = new BigDecimal(strCount);
+                mesItemUse.setUseItemCount(strCountBig);
+                //变动用量
+                mesItemUse.setVariUse(new BigDecimal(0));
+                //固定用量
+                mesItemUse.setFixedUse(strCountBig);
+                //useItemMeasure
+                String useItemMeasure = jspBom.get("STRNEXTITEMUNIT").toString();
+                mesItemUse.setUseItemMeasure(useItemMeasure);
+                //辅助计量单位
+                String useItemMeasureAssist = jspBom.get("STRUNITNAMEAUX").toString();
+                mesItemUse.setItemMeasureAssist(useItemMeasureAssist);
+                //辅助固定用量
+                String fixUseAssist = jspBom.get("DBLQUANTITYAUX").toString();
+                mesItemUse.setFixedUseAssist(new BigDecimal(fixUseAssist));
+                //variUseAssist
+                mesItemUse.setVariUseAssist(new BigDecimal(0));
+                String itemStyle = jspBom.get("BYTITEMSOURCE").toString();
+                if(itemStyle.equals("0")){
+                    mesItemUse.setUseItemType("00");
+                }else{
+                    mesItemUse.setUseItemType("01");
+                }
+                list.add(mesItemUse);
+            }
+            if(list != null && list.size() != 0){
+                mesItemUseService.saveOrUpdateBatch(list);
+            }
+            Integer timeBoms = bomIdList.size()/1000;
+            if(bomIdList.size()%1000 != 0){
+                timeBoms = timeBoms +1;
+            }
+            for(int i=1;i<=timeBoms;i++){
+                List<Integer> datas = new ArrayList<>();
+                if(i== timeBoms){
+                    datas =bomIdList.subList((i-1)*1000,bomIdList.size());
+                }else{
+                    datas = bomIdList.subList((i-1)*1000,i*1000);
+                }
+                if(datas.size() != 0){
+                    bomManageInfoMapper.bomUpdate(datas);
+                }
+            }
+            Set<String> items = list.stream().filter(d -> ItemType.isMaterials(d.getUseItemType())).map(MesItemUse::getUseItemNo).collect(Collectors.toSet());
+            mesItemUseService.useDateFromErp(items);
+            //工序数据
+            System.out.println("开始同步工序数据");
+            List<Map<String, Object>> jspBomRouterList = bomManageInfoMapper.bomRouter();
+            List<MesProcedure> stockList = new ArrayList<>();
+            List<Integer> routerIdList = new ArrayList<>();
+            for(Map<String, Object> jspBomRouter:jspBomRouterList){
+                routerIdList.add(Integer.valueOf(jspBomRouter.get("LNGBOMID").toString()));
+                MesProcedure procedureItem = new MesProcedure();
+                List<String> param = new ArrayList<>();
+                param.add(jspBomRouter.get("STRBOMCODE").toString());
+                Map<String, MesItemStock> MesItemStockMap = mesItemStockMapper.getByBomNos(param);
+                //产品编码
+                MesItemStock mesItemStock = MesItemStockMap.get(jspBomRouter.get("STRBOMCODE").toString());
+                if(mesItemStock == null || mesItemStock.getItemNo() == null || mesItemStock.getItemNo().isEmpty()){
+                    continue;
+                }
+                procedureItem.setItemNo(mesItemStock.getItemNo());
+                //序号
+                procedureItem.setSeqNo(Integer.valueOf(jspBomRouter.get("LNGORDER").toString()));
+                //工序编码
+                procedureItem.setProcedureCode(jspBomRouter.get("STRROUTECODE").toString());
+                List<MesProcedure> mesProcedureList = mesProcedureService.list(new LambdaQueryWrapper<MesProcedure>().eq(MesProcedure::getItemNo, jspBomRouter.get("STRBOMCODE").toString()).eq(MesProcedure::getProcedureCode,jspBomRouter.get("STRROUTECODE").toString()));
+                if(mesProcedureList != null && mesProcedureList.size() !=0){
+                    procedureItem.setId(mesProcedureList.get(0).getId());
+                }else{
+                    UUID uuid = UUID.randomUUID();
+                    String randomCode = uuid.toString().replace("-", "");
+                    procedureItem.setId(randomCode.substring(0, 32));
+                }
+                //工序名称
+                procedureItem.setProcedureName(jspBomRouter.get("STRROUTENAME").toString());
+                //加工工时、hoursFixed
+                String outerationTime = jspBomRouter.get("DBLROUTERATIONTIME") == null?"0":jspBomRouter.get("DBLROUTERATIONTIME").toString();
+                procedureItem.setHoursFixed(new BigDecimal(outerationTime));
+                procedureItem.setHoursWork(new BigDecimal(outerationTime));
+                //准备工时
+                String dblRoutePrepareTime = jspBomRouter.get("DBLROUTEPREPARETIME") == null?"0":jspBomRouter.get("DBLROUTEPREPARETIME").toString();
+                procedureItem.setHoursPrepare(new BigDecimal(dblRoutePrepareTime));
+                //工作车间Id
+                String deptName = jspBomRouter.get("STRDEPARTMENTNAME") == null?"":jspBomRouter.get("STRDEPARTMENTNAME").toString();
+                if(deptName.equals("制造部")){
+                    procedureItem.setDeptId("312905765054574592");
+                }else{
+                    procedureItem.setDeptId("316142126431625216");
+                }
+                //设备Id
+                String deviceId = jspBomRouter.get("STRWORKCENTERNAME") == null?"":jspBomRouter.get("STRWORKCENTERNAME").toString();
+                procedureItem.setDeviceId(getDeviceName(jspBomRouter.get("STRROUTECODE").toString()));
+                stockList.add(procedureItem);
+            }
+            if(stockList != null && stockList.size() !=0){
+                mesProcedureService.saveOrUpdateBatch(stockList);
+            }
+            Integer timeRouters = routerIdList.size()/1000;
+            if(routerIdList.size()%1000 != 0){
+                timeRouters = timeRouters +1;
+            }
+            for(int i=1;i<=timeRouters;i++){
+                List<Integer> datas = new ArrayList<>();
+                if(i==timeRouters){
+                    datas = routerIdList.subList((i-1)*1000,routerIdList.size());
+                }else{
+                    datas = routerIdList.subList((i-1)*1000,i*1000);
+                }
+                if(datas.size() != 0){
+                    bomManageInfoMapper.routerUpdate(datas);
+                }
+            }
+            System.out.println("同步结束");
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return jspMaterialList;
+    }
+
+
 
     @Override
     public String getTaskOfWeek() {

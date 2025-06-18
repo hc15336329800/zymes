@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.item.mapper.MesProcedureAndMidItemStockMapper">
+
+    <!-- 查询缺失中间记录的工序 -->
+    <select id="getMissingProcedures" resultType="cn.jb.boot.biz.item.entity.MesProcedure">
+        SELECT a.*
+        FROM mes_procedure a
+                 LEFT JOIN t_mid_item_stock b
+                           ON a.item_no = b.item_no AND a.procedure_code = b.procedure_code
+        WHERE b.id IS NULL
+    </select>
+
+    <!-- 批量插入中间表 -->
+    <insert id="insertBatchToMid">
+        INSERT INTO t_mid_item_stock (
+        id, item_no, procedure_code, procedure_name, seq_no, last_flag, created_time
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id}, #{item.itemNo}, #{item.procedureCode}, #{item.procedureName},
+            #{item.seqNo}, #{item.lastFlag}, #{item.createdTime})
+        </foreach>
+    </insert>
+
+</mapper>
