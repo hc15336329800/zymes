@@ -46,7 +46,7 @@ public class SetMidItemStockJob {
 	@Scheduled(cron = "0 0/1 * * * ?")
 	public void process() {
 
-		System.out.println("info:  工序新增+物料工序新增 同步调用开始（频率一分钟）");
+		System.out.println("info:  工序新增/物料工序新增   内部同步调用开始（频率一分钟）");
 
 //        补全缺失的中间工序记录：如果 mes_procedure 有但 t_mid_item_stock 中没有，就插入t_mid_item_stock
 //		syncMissMids();

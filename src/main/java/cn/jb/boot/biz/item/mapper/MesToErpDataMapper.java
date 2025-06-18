@@ -16,9 +16,22 @@ public interface MesToErpDataMapper {
 	@Select("SELECT * FROM JSPMATERIAL WHERE ROWNUM <= 10") // Oracle 测试SQL
 	List<Map<String, Object>> materialMessageCS();
 
+
+	//===============================物料==================================
+
 	// 查询未同步的ERP物料
 	List<Map<String, Object>> materialMessage();
 
 	// 批量回写ERP同步标记
 	void materUpdate(@Param("itemNoList") List<String> itemNoList);
+
+
+	//===============================bom树==================================
+
+
+	// 查询ERP中的BOM用料树（JSPBOM）
+	List<Map<String, Object>> bomMessage();
+
+	// 批量回写ERP同步标记
+	void bomUpdate(@Param("idList") List<Integer> idList);
 }

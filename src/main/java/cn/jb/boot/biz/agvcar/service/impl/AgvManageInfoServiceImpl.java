@@ -444,6 +444,7 @@ public class AgvManageInfoServiceImpl extends ServiceImpl<AgvManageInfoMapper, A
             }
             Set<String> items = list.stream().filter(d -> ItemType.isMaterials(d.getUseItemType())).map(MesItemUse::getUseItemNo).collect(Collectors.toSet());
             mesItemUseService.useDateFromErp(items);
+
             //工序数据
             System.out.println("开始同步工序数据");
             List<Map<String, Object>> jspBomRouterList = bomManageInfoMapper.bomRouter();

@@ -2,10 +2,13 @@ package cn.jb.boot.biz.item.service.impl;
 
 import cn.jb.boot.biz.agvcar.mapper.BomManageInfoMapper;
 import cn.jb.boot.biz.item.entity.MesItemStock;
+import cn.jb.boot.biz.item.entity.MesItemUse;
 import cn.jb.boot.biz.item.enums.ItemType;
 import cn.jb.boot.biz.item.mapper.MesToErpDataMapper;
 import cn.jb.boot.biz.item.service.MesItemStockService;
+import cn.jb.boot.biz.item.service.MesItemUseService;
 import com.baomidou.dynamic.datasource.annotation.DS;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +35,8 @@ public class MesToErpDataService {
 	@Resource
 	private MesItemStockService mesItemStockService;
 
-
+	@Autowired
+	private MesItemUseService mesItemUseService;
 
 	@Autowired
 	private MesToErpDataMapper mesToErpDataMapper;
@@ -42,8 +46,9 @@ public class MesToErpDataService {
 
 
 	/**
+	 * 物料同步 V2.0
 	 * 仅同步 ERP（JSPMATERIAL）表 BYTSTATUS=0 的物料数据，完成后将 BYTSTATUS 置为 1。
-	 * 所有字段、辅助逻辑不删减。
+	 *  拉取数据、回写都走 Mapper（Oracle），
 	 */
 //	@Transactional(rollbackFor = Exception.class)   跨库不能使用事务！
 	public int syncItemStock() {
@@ -154,7 +159,96 @@ public class MesToErpDataService {
 	}
 
 
-	//=====================================服务中切换数据源=========================================
+
+	/**
+	 * bom同步 V1.0
+	 * 仅同步 ERP（JSPBOM）表 BYTSTATUS=0 的BOM用料树
+	 * @return 同步数量
+	 */
+	public int syncBomTree() {
+		// 1. 拉ERP BOM用料
+		List<Map<String, Object>> bomList = mesToErpDataMapper.bomMessage();
+		System.out.println("ERP-BOM拉取结果：" + bomList);
+		if (bomList == null || bomList.isEmpty()) {
+			System.err.println("【警告】未拉取到ERP用料数据，终止同步！");
+			log.info("【警告】未拉取到ERP用料数据，终止同步！");
+			return 0;
+		}
+
+		List<Integer> bomIdList = new ArrayList<>();
+		List<MesItemUse> saveList = new ArrayList<>();
+		LocalDateTime now = LocalDateTime.now();
+
+		for (Map<String, Object> row : bomList) {
+			bomIdList.add(Integer.valueOf(row.get("LNGBOMID").toString()));
+			MesItemUse use = null;
+			// 查重（父+子唯一）
+			String itemNo = row.get("STRITEMCODE").toString();
+			String useItemNo = row.get("STRNEXTITEMCODE").toString();
+
+			List<MesItemUse> existList = mesItemUseService.list(
+					new LambdaQueryWrapper<MesItemUse>()
+							.eq(MesItemUse::getItemNo, itemNo)
+							.eq(MesItemUse::getUseItemNo, useItemNo)
+			);
+			if (existList != null && !existList.isEmpty()) {
+				use = existList.get(0);
+			} else {
+				use = new MesItemUse();
+				use.setId(UUID.randomUUID().toString().replace("-", ""));
+			}
+
+			// 字段填充
+			use.setItemNo(itemNo);
+			use.setUseItemNo(useItemNo);
+			use.setUseItemCount(new BigDecimal(row.get("DBLQUANTITY").toString()));
+			use.setVariUse(BigDecimal.ZERO);
+			use.setFixedUse(new BigDecimal(row.get("DBLQUANTITY").toString()));
+			use.setUseItemMeasure(row.get("STRNEXTITEMUNIT").toString());
+			use.setItemMeasureAssist(row.get("STRUNITNAMEAUX").toString());
+			use.setFixedUseAssist(new BigDecimal(row.get("DBLQUANTITYAUX").toString()));
+			use.setVariUseAssist(BigDecimal.ZERO);
+			// 类型
+			String itemStyle = row.get("BYTITEMSOURCE").toString();
+			use.setUseItemType(itemStyle.equals("0") ? "00" : "01");
+			// 时间
+			use.setUpdatedTime(now);
+
+			saveList.add(use);
+		}
+
+		// 2. 保存到MES
+		if (saveList.isEmpty()) {
+			System.err.println("【警告】无有效用料明细需要同步！");
+			log.info("【警告】无有效用料明细需要同步！");
+			return 0;
+		}
+		mesItemUseService.saveOrUpdateBatch(saveList);
+
+		// 3. 分批回写ERP
+		int batch = 1000;
+		for (int i = 0; i < bomIdList.size(); i += batch) {
+			List<Integer> subIds = bomIdList.subList(i, Math.min(i + batch, bomIdList.size()));
+			mesToErpDataMapper.bomUpdate(subIds);
+		}
+		log.info("【警告】BOM用料同步完成，同步数={}", saveList.size());
+		return saveList.size();
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	//=====================================服务中切换数据源   下下策=========================================
 
 
 	/**

@@ -35,14 +35,26 @@ public class GetErpDataJob {
 	public void syncItemStock() {
 
 		long start = System.currentTimeMillis();
+
+
+
+//
+//		log.info("开始加载物料...");
+//		System.out.println("info:  物料同步开始 ，频率一分钟");
+//		int  cc = mesToErpDataService.syncItemStock();
+//		System.out.println("info:  物料同步结束, 同步数量："+cc +"条");
+//		log.info("加载物料...cost:{}", System.currentTimeMillis() - start);
+
+
+
 		log.info("开始加载BOM用料...");
-
-		System.out.println("info:  物料同步开始 ，频率一分钟");
-		int  cc = mesToErpDataService.syncItemStock();
-
-		System.out.println("info:  物料同步结束, 同步数量："+cc +"条");
-
+		System.out.println("info:  BOM用料 ，频率一分钟");
+		int  cc1 = mesToErpDataService.syncBomTree();
+		System.out.println("info:  BOM用料同步结束, 同步数量："+cc1 +"条");
 		log.info("加载BOM用料完成...cost:{}", System.currentTimeMillis() - start);
+
+
+
 		startTime = DateUtil.formatDateTime(LocalDateTime.now());
 
 	}
