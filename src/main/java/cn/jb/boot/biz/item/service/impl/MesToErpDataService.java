@@ -71,8 +71,8 @@ public class MesToErpDataService {
 			return -1;
 		}
 		if (erpList == null || erpList.isEmpty()) {
-			System.err.println("【警告】ERP未查到可同步的物料数据！");
-			log.info("【警告】ERP未查到可同步的物料数据！");
+//			System.err.println("【警告】ERP未查到可同步的物料数据！");
+//			log.info("【警告】ERP未查到可同步的物料数据！");
 			return 0;
 		}
 
@@ -179,8 +179,8 @@ public class MesToErpDataService {
 		List<Map<String, Object>> bomList = mesToErpDataMapper.bomMessage();
 		System.out.println("ERP-BOM拉取结果：" + bomList);
 		if (bomList == null || bomList.isEmpty()) {
-			System.err.println("【警告】ERP未查到可同步的bom数据！");
-			log.info("【警告】ERP未查到可同步的bom数据！");
+//			System.err.println("【警告】ERP未查到可同步的bom数据！");
+//			log.info("【警告】ERP未查到可同步的bom数据！");
 			return 0;
 		}
 
@@ -260,8 +260,10 @@ public class MesToErpDataService {
 	public int syncProcedure() {
 		// 1. 拉取 ERP 侧待同步（BYTSTATUS=0）的工序数据
 		List<Map<String, Object>> erpRouterList = mesToErpDataMapper.bomRouter();
+		System.out.println("ERP-工序拉取结果：" + erpRouterList);
 		if (erpRouterList == null || erpRouterList.isEmpty()) {
-			log.info("ERP工序数据为空, 不做同步");
+//			System.err.println("【警告】ERP未查到可同步的工序数据！");
+//			log.info("【警告】ERP未查到可同步的工序数据！");
 			return 0;
 		}
 
@@ -287,6 +289,8 @@ public class MesToErpDataService {
 			MesItemStock stock = bomToStock.get(bomNo);
 			// 若在 MES 中找不到对应物料，则跳过此条工序
 			if (stock == null || stock.getItemNo() == null || stock.getItemNo().isEmpty()) {
+				System.err.println("【警告】BOM编码[" + bomNo + "]在MES中找不到对应物料，跳过同步！");
+				log.info("【警告】BOM编码[{}]在MES中找不到对应物料，跳过同步！", bomNo);
 				continue;
 			}
 			String itemNo = stock.getItemNo();
@@ -344,19 +348,22 @@ public class MesToErpDataService {
 		}
 
 		// 批量保存或更新到 MES 工序表
-		if (!saveList.isEmpty()) {
-			mesProcedureService.saveOrUpdateBatch(saveList);
+		if (saveList.isEmpty()) {
+			System.err.println("【警告】无有效工序数据需要同步！");
+			log.info("【警告】无有效工序数据需要同步！");
+			return 0;
 		}
+		mesProcedureService.saveOrUpdateBatch(saveList);
 
 		// 批量回写 ERP 工序表同步状态 BYTSTATUS → 1
 		if (!routerIdList.isEmpty()) {
 			mesToErpDataMapper.routerUpdate(routerIdList);
 		}
 
-		log.info("工序同步完成, 本次同步: {} 条", saveList.size());
+//		System.err.println("【警告】工序同步完成，同步数=" + saveList.size());
+//		log.info("【警告】工序同步完成，同步数={}", saveList.size());
 		return saveList.size();
 	}
-
 
 	/**
 	 * 工序同步 V1.1
