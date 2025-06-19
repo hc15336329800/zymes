@@ -24,7 +24,8 @@ public class GetErpDataJob {
 	private MesItemStockService mesItemStockService;
 	@Resource
 	private MesToErpDataService mesToErpDataService;
-	private volatile String startTime = "2023-07-01 00:00:00";
+
+	private volatile String startTime = "2025-06-01 00:00:00";
 
 
 
@@ -34,32 +35,36 @@ public class GetErpDataJob {
 	@Scheduled(cron = "0 0/1 * * * ?")
 	public void syncItemStock() {
 
-		long start = System.currentTimeMillis();
+		long start = System.currentTimeMillis(); //当前时间
+
+
+		log.info("开始加载物料...");
+		System.out.println("info: 物料多源同步开始（频率一分钟）");
+		int  cc = mesToErpDataService.syncItemStock();
+		log.info("加载物料...cost:{}", System.currentTimeMillis() - start);
+		long  usertime1= System.currentTimeMillis() - start;
+		System.out.println("info:  物料多源同步结束, 同步数量："+cc +"条，耗时："+ usertime1+"毫秒");
 
 
 
-//
-//		log.info("开始加载物料...");
-//		System.out.println("info:  物料同步开始 ，频率一分钟");
-//		int  cc = mesToErpDataService.syncItemStock();
-//		System.out.println("info:  物料同步结束, 同步数量："+cc +"条");
-//		log.info("加载物料...cost:{}", System.currentTimeMillis() - start);
+		log.info("开始加载BOM用料...");
+		System.out.println("info: BOM用料多源同步开始（频率一分钟）");
+		int  cc2 = mesToErpDataService.syncBomTree();
+		log.info("加载BOM用料完成...cost:{}", System.currentTimeMillis() - start);
+		long  usertime2= System.currentTimeMillis() - start;
+		System.out.println("info:  BOM用料多源同步结束, 同步数量："+cc2 +"条，耗时："+ usertime2+"毫秒");
 
-
-
-//		log.info("开始加载BOM用料...");
-//		System.out.println("info:  BOM用料 ，频率一分钟");
-//		int  cc1 = mesToErpDataService.syncBomTree();
-//		System.out.println("info:  BOM用料同步结束, 同步数量："+cc1 +"条");
-//		log.info("加载BOM用料完成...cost:{}", System.currentTimeMillis() - start);
 
 		log.info("开始加载BOM工序...");
-		System.out.println("info: BOM工序 ，频率一分钟");
-		int  cc1 = mesToErpDataService.syncProcedure();
-		System.out.println("info:  BOM工序同步结束, 同步数量："+cc1 +"条");
+		System.out.println("info: BOM工序多源同步开始（频率一分钟）");
+		int  cc3 = mesToErpDataService.syncProcedure();
 		log.info("加载BOM工序完成...cost:{}", System.currentTimeMillis() - start);
+		long  usertime3= System.currentTimeMillis() - start;
+		System.out.println("info:  BOM工序多源同步结束, 同步数量："+cc3 +"条，耗时："+ usertime3+"毫秒");
 
-		startTime = DateUtil.formatDateTime(LocalDateTime.now());
+
+
+//		startTime = DateUtil.formatDateTime(LocalDateTime.now());
 
 	}
 

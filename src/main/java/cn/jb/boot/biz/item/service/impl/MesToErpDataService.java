@@ -49,6 +49,9 @@ public class MesToErpDataService {
 //=====================================map中切换数据源=========================================
 
 
+
+
+	//===================物料==================
 	/**
 	 * 物料同步 V2.0
 	 * 仅同步 ERP（JSPMATERIAL）表 BYTSTATUS=0 的物料数据，完成后将 BYTSTATUS 置为 1。
@@ -163,6 +166,8 @@ public class MesToErpDataService {
 	}
 
 
+	//===================bom==================
+
 	/**
 	 * bom同步 V1.0
 	 * 仅同步 ERP（JSPBOM）表 BYTSTATUS=0 的BOM用料树
@@ -174,8 +179,8 @@ public class MesToErpDataService {
 		List<Map<String, Object>> bomList = mesToErpDataMapper.bomMessage();
 		System.out.println("ERP-BOM拉取结果：" + bomList);
 		if (bomList == null || bomList.isEmpty()) {
-			System.err.println("【警告】未拉取到ERP用料数据，终止同步！");
-			log.info("【警告】未拉取到ERP用料数据，终止同步！");
+			System.err.println("【警告】ERP未查到可同步的bom数据！");
+			log.info("【警告】ERP未查到可同步的bom数据！");
 			return 0;
 		}
 
@@ -240,6 +245,119 @@ public class MesToErpDataService {
 	}
 
 
+
+	//===================工序==================
+
+
+
+	/**
+	 * 工序同步 V1.2
+	 *使用BomNo索引，并保留bomNo字段备用
+	 * 同步ERP工序表（JSPBOMROUTER）到MES工序表（mes_procedure）。
+	 * 只同步ERP端 BYTSTATUS=0 的工序数据（未同步/有变更），同步完成后回写BYTSTATUS=1。
+	 * 唯一性判定：bom_no（对应STRBOMCODE）+ procedure_code（对应STRROUTECODE）。
+	 */
+	public int syncProcedure() {
+		// 1. 拉取 ERP 侧待同步（BYTSTATUS=0）的工序数据
+		List<Map<String, Object>> erpRouterList = mesToErpDataMapper.bomRouter();
+		if (erpRouterList == null || erpRouterList.isEmpty()) {
+			log.info("ERP工序数据为空, 不做同步");
+			return 0;
+		}
+
+		// 用于批量回写ERP的BOM工序ID集合
+		List<Integer> routerIdList = new ArrayList<>();
+		// MES侧待保存/更新的工序实体集合
+		List<MesProcedure> saveList = new ArrayList<>();
+		LocalDateTime now = LocalDateTime.now();
+
+		// 预取所有需要的 BOM→MesItemStock 映射，避免循环内重复查询
+		List<String> allBomNos = erpRouterList.stream()
+				.map(r -> r.get("STRBOMCODE").toString())
+				.distinct()
+				.collect(Collectors.toList());
+		Map<String, MesItemStock> bomToStock = mesItemStockService.getByBomNos(allBomNos);
+
+		for (Map<String, Object> row : erpRouterList) {
+			// 记录 ERP 工序 ID（LNGBOMID），后续用于回写同步状态
+			routerIdList.add(Integer.valueOf(row.get("LNGBOMID").toString()));
+
+			// --- 新增：先通过 BOM 号映射到 MES 的 item_no ---
+			String bomNo = row.get("STRBOMCODE").toString();
+			MesItemStock stock = bomToStock.get(bomNo);
+			// 若在 MES 中找不到对应物料，则跳过此条工序
+			if (stock == null || stock.getItemNo() == null || stock.getItemNo().isEmpty()) {
+				continue;
+			}
+			String itemNo = stock.getItemNo();
+
+			// 唯一性判定：使用 item_no + procedure_code 保证幂等
+			String procedureCode = row.get("STRROUTECODE").toString();
+			LambdaQueryWrapper<MesProcedure> qw = new LambdaQueryWrapper<MesProcedure>()
+					.eq(MesProcedure::getItemNo, itemNo)
+					.eq(MesProcedure::getProcedureCode, procedureCode);
+			// getOne(qw, false)：只要有一条就返回，不抛异常
+			MesProcedure exist = mesProcedureService.getOne(qw, false);
+
+			// 如果已存在则复用，否则新建
+			MesProcedure p = exist != null ? exist : new MesProcedure();
+			if (p.getId() == null) {
+				// 新建时要填充主键、创建人、创建时间
+				p.setId(UUID.randomUUID().toString().replace("-", ""));
+				p.setCreatedBy("1");
+				p.setCreatedTime(now);
+			}
+
+			// 将原始 ERP BOM 编码存入 bom_no 字段（保留来源信息）
+			p.setBomNo(bomNo);         // 【修正点1：保留 STRBOMCODE】
+			p.setItemNo(itemNo);       // 【修正点2：使用 MES item_no 进行关联】
+			p.setProcedureCode(procedureCode);
+			p.setSeqNo(Integer.valueOf(row.get("LNGORDER").toString()));
+			p.setProcedureName(row.get("STRROUTENAME").toString());
+
+			// 加工工时 → hoursFixed
+			String time = row.get("DBLROUTERATIONTIME") == null ? "0" : row.get("DBLROUTERATIONTIME").toString();
+			p.setHoursFixed(new BigDecimal(time));
+
+			// 工作工时 → hoursWork
+			String processTime = row.get("DBLROUTEPROCESSTIME") == null ? "0" : row.get("DBLROUTEPROCESSTIME").toString();
+			p.setHoursWork(new BigDecimal(processTime));
+
+			// 准备工时 → hoursPrepare
+			String prepTime = row.get("DBLROUTEPREPARETIME") == null ? "0" : row.get("DBLROUTEPREPARETIME").toString();
+			p.setHoursPrepare(new BigDecimal(prepTime));
+
+			// 部门映射：制造部 / 其他
+			String deptName = row.get("STRDEPARTMENTNAME") == null ? "" : row.get("STRDEPARTMENTNAME").toString();
+			p.setDeptId("制造部".equals(deptName)
+					? "312905765054574592"
+					: "316142126431625216");
+
+			// 设备映射（保持原逻辑，可根据实际重写）
+			p.setDeviceId(getDeviceName(procedureCode));
+
+			// 更新人、更新时间赋值
+			p.setUpdatedBy("1");
+			p.setUpdatedTime(now);
+
+			saveList.add(p);
+		}
+
+		// 批量保存或更新到 MES 工序表
+		if (!saveList.isEmpty()) {
+			mesProcedureService.saveOrUpdateBatch(saveList);
+		}
+
+		// 批量回写 ERP 工序表同步状态 BYTSTATUS → 1
+		if (!routerIdList.isEmpty()) {
+			mesToErpDataMapper.routerUpdate(routerIdList);
+		}
+
+		log.info("工序同步完成, 本次同步: {} 条", saveList.size());
+		return saveList.size();
+	}
+
+
 	/**
 	 * 工序同步 V1.1
 	 *使用bomNo索引
@@ -247,7 +365,7 @@ public class MesToErpDataService {
 	 * 只同步ERP端 BYTSTATUS=0 的工序数据（未同步/有变更），同步完成后回写BYTSTATUS=1。
 	 * 唯一性判定：bom_no（对应STRBOMCODE）+ procedure_code（对应STRROUTECODE）。
 	 */
-	public int syncProcedure() {
+	public int syncProcedureBomNo() {
 		// 1. 拉取ERP侧待同步（BYTSTATUS=0）的工序数据
 		List<Map<String, Object>> erpRouterList = mesToErpDataMapper.bomRouter();
 		if (erpRouterList == null || erpRouterList.isEmpty()) {
