@@ -56,8 +56,10 @@ public class BomUsedServiceImpl extends ServiceImpl<BomUsedMapper, BomUsed> impl
     @Override
     public void load(String startTime) {
         // 查询所有在 startTime 之后更新且类型为 BOM 的物料记录
+        //   SELECT id, item_no, bom_no  构建纯树
         List<MesItemStock> itemList = stockMapper.selectBoms(startTime);
         // 遍历每个物料，加载其 BOM 依赖数据
+        //
         for (MesItemStock stock : itemList) {
             loadBomData(stock);
         }

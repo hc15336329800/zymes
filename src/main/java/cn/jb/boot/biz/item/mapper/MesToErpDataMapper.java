@@ -23,7 +23,7 @@ public interface MesToErpDataMapper {
 	List<Map<String, Object>> materialMessage();
 
 	// 批量回写ERP同步标记
-	void materUpdate(@Param("itemNoList") List<String> itemNoList);
+	int materUpdate(@Param("itemNoList") List<String> itemNoList);
 
 
 	//===============================bom树==================================
@@ -41,7 +41,7 @@ public interface MesToErpDataMapper {
 	List<Map<String, Object>> bomRouter();
 
 	/** 根据工序ID批量回写同步状态为已同步 */
-	void routerUpdate(@Param("routerIdList") List<Integer> routerIdList);
+	int routerUpdate(@Param("routerIdList") List<Integer> routerIdList);
 
 
 

@@ -9,13 +9,13 @@
 
     <!-- 查询未同步物料 -->
     <select id="materialMessage" resultType="java.util.Map">
-        SELECT * FROM JSPMATERIAL WHERE BYTSTATUS = 0
+        SELECT * FROM JSPMATERIAL WHERE BYTSTATUS = 1
     </select>
 
     <!-- 批量更新同步状态 -->
     <update id="materUpdate" parameterType="java.util.List">
         UPDATE JSPMATERIAL
-        SET BYTSTATUS = 1
+        SET BYTSTATUS = 0
         WHERE STRITEMCODE IN
         <foreach item="itemNo" collection="itemNoList" open="(" separator="," close=")">
             #{itemNo}
@@ -25,10 +25,10 @@
 
     <!--===============================BOM==================================-->
     <select id="bomMessage" resultType="java.util.Map">
-        SELECT * FROM JSPBOM WHERE BYTSTATUS = 0
+        SELECT * FROM JSPBOM WHERE BYTSTATUS = 1
     </select>
     <update id="bomUpdate">
-        UPDATE JSPBOM SET BYTSTATUS = 1 WHERE LNGBOMID IN
+        UPDATE JSPBOM SET BYTSTATUS = 0 WHERE LNGBOMID IN
         <foreach collection="idList" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
@@ -38,12 +38,12 @@
 
     <!-- 拉取ERP工序路由（只同步未同步的） -->
     <select id="bomRouter" resultType="java.util.Map">
-        SELECT * FROM JSPBOMROUTER WHERE BYTSTATUS = 0
+        SELECT * FROM JSPBOMROUTER WHERE BYTSTATUS = 1
     </select>
 
     <!-- 回写同步状态 -->
     <update id="routerUpdate">
-        UPDATE JSPBOMROUTER SET BYTSTATUS = 1 WHERE LNGBOMID IN
+        UPDATE JSPBOMROUTER SET BYTSTATUS = 0 WHERE LNGBOMID IN
         <foreach item="id" collection="routerIdList" open="(" separator="," close=")">
             #{id}
         </foreach>

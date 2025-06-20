@@ -1,9 +1,12 @@
 package cn.jb.boot.biz.item.task;
 
+
+import cn.jb.boot.biz.agvcar.service.AgvManageInfoService;
 import cn.jb.boot.biz.item.entity.MesItemStock;
 import cn.jb.boot.biz.item.entity.MesProcedure;
 import cn.jb.boot.biz.item.entity.MidItemStock;
 import cn.jb.boot.biz.item.mapper.MesProcedureMapper;
+import cn.jb.boot.biz.item.service.BomUsedService;
 import cn.jb.boot.biz.item.service.MesItemStockService;
 import cn.jb.boot.biz.item.service.MidItemStockService;
 import cn.jb.boot.framework.enums.JbEnum;
@@ -23,12 +26,15 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 
-//定时同步物料
 
+/**
+ *  MES内部基础数据同步      V1.1
+ */
 @Component
 @Slf4j
-public class SetMidItemStockJob {
+public class GetMesDataJob {
 
+	private volatile String startTime = "2025-06-20 13:00:00";
 	@Resource
 	private MidItemStockService midItemStockService;
 	@Resource
@@ -36,29 +42,51 @@ public class SetMidItemStockJob {
 	@Resource
 	private MesItemStockService mesItemStockService;
 
-	private volatile String startTime = "2024-01-01 00:00:00";
-	private static final String lastName = "装车";
+	@Resource
+	private BomUsedService bomUsedService;
 
+ 	private static final String lastName = "装车";
+
+	//===========================同步物料===================================
+
+	//无需同步
+
+	//===========================同步bom树===================================
+
+
+	/**
+	 *  内部同步bom树
+	 * 读取：mes_item_stock, mes_item_use     删除/插入：t_bom_used
+	 *
+	 *
+	 */
+	@Scheduled(cron = "0 0/3 * * * ?")
+	public void bom() {
+ 		System.out.println("Info:   bom内部同步 （频率一分钟）开启");
+				long start = System.currentTimeMillis();
+				log.info("开始加载BOM用料...");
+		bomUsedService.load(startTime);
+				log.info("加载BOM用料完成...cost:{}", System.currentTimeMillis() - start);
+				startTime = DateUtil.formatDateTime(LocalDateTime.now());
+	}
+
+	//===========================同步工序 及 中间件量===================================
 
 	/**
 	 * 内部同步 : 工序新增+物料工序新增   自动同步
 	 */
 	@Scheduled(cron = "0 0/1 * * * ?")
-	public void process() {
-
-		System.out.println("info:   内部同步 --  在制品工序（频率一分钟）");
-
-//        补全缺失的中间工序记录：如果 mes_procedure 有但 t_mid_item_stock 中没有，就插入t_mid_item_stock
-//		syncMissMids();
-
-//        动态更新当前进展工序标识和初始库存数量，更新 last_flag = '01' 与 initial_count
-//		updateLastProc();
-
+	public void  process() {
+		System.out.println("Info:   工序内部同步 （频率一分钟） 未开启");
+		//        补全缺失的中间工序记录：如果 mes_procedure 有但 t_mid_item_stock 中没有，就插入t_mid_item_stock
+		//		addUpdateMidItemStock();
+		//        动态更新当前进展工序标识和初始库存数量，更新 last_flag = '01' 与 initial_count
+		//		updateMidItemStock();
 	}
 
 
 	//        把 mes_procedure 表中有，但 t_mid_item_stock 表中没有的工序数据，筛选出来，然后插入到 t_mid_item_stock 表中。
-	private void syncMissMids() {
+	private void addUpdateMidItemStock() {
 		List<MesProcedure> ids = midItemStockService.getMissingMid();
 		if (CollectionUtils.isNotEmpty(ids)) {
 			List<MidItemStock> list = ids.stream().map(d -> {
@@ -85,7 +113,7 @@ public class SetMidItemStockJob {
 	 * - 将该产品所有工序的 last_flag 清零；
 	 * - 再将最后一道工序标记为 last_flag = '01'，并写入 initial_count。
 	 */
-	private void updateLastProc() {
+	private void updateMidItemStock() {
 		// 1. 查询最近更新过的 item_no 列表（依赖 XML 中 selectNearItemNo）
 		List<String> itemNos = mesProcedureMapper.selectNearItemNo(startTime);
 
@@ -145,42 +173,6 @@ public class SetMidItemStockJob {
 		startTime = DateUtil.formatDateTime(LocalDateTime.now());
 	}
 
-
-//    private void updateLastProc() {
-//        List<String> itemNos = mesProcedureMapper.selectNearItemNo(startTime);
-//        for (String itemNo : itemNos) {
-//            List<MesProcedure> list =
-//                    mesProcedureMapper.selectList(new LambdaQueryWrapper<MesProcedure>().eq(MesProcedure::getItemNo,
-//                            itemNo));
-//            int maxNo = list.stream().mapToInt(MesProcedure::getSeqNo).max().getAsInt();
-//            Optional<MesProcedure> optional =
-//                    list.stream().filter(d -> d.getProcedureName().contains(lastName)).findFirst();
-//            MesProcedure lastMid;
-//            if (optional.isPresent()) {
-//                lastMid = optional.get();
-//            } else {
-//                //最后一道工序
-//                Optional<MesProcedure> first = list.stream().filter(d -> d.getSeqNo() == maxNo).findFirst();
-//                lastMid = first.get();
-//            }
-//            midItemStockService.update(new LambdaUpdateWrapper<MidItemStock>().eq(MidItemStock::getItemNo,
-//                    lastMid.getItemNo())
-//                    .set(MidItemStock::getLastFlag, JbEnum.CODE_00.getCode()));
-//            MesItemStock mis = mesItemStockService.getByItemNo(lastMid.getItemNo());
-//            if (Objects.isNull(mis)) {
-//                continue;
-//            }
-//            midItemStockService.update(new LambdaUpdateWrapper<MidItemStock>()
-//                    .eq(MidItemStock::getItemNo, lastMid.getItemNo())
-//                    .eq(MidItemStock::getProcedureCode, lastMid.getProcedureCode())
-//                    .set(MidItemStock::getLastFlag, JbEnum.CODE_01.getCode())
-//                    .set(MidItemStock::getInitialCount, mis.getItemCount())
-//            );
-//
-//        }
-//        startTime = DateUtil.formatDateTime(LocalDateTime.now());
-//
-//    }
 
 
 }

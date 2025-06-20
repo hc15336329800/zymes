@@ -55,4 +55,15 @@
 
     </select>
 
+
+    <!-- 批量删除方法（匹配成对删除） -->
+    <delete id="deleteByItemNoAndProcedureCode">
+        DELETE FROM mes_procedure
+        WHERE (item_no, procedure_code) IN
+        <foreach collection="itemNos" item="itemNo" index="index"
+                 open="(" separator="," close=")">
+            (#{itemNo}, #{procedureCodes[${index}]})
+        </foreach>
+    </delete>
+
 </mapper>

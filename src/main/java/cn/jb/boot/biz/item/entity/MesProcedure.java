@@ -28,6 +28,14 @@ public class MesProcedure extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
 
+
+    /**
+     * 是否有效
+     */
+    @Schema(description = "是否有效 00:无效，01:有效")
+    @TableField("is_valid")
+    private String IsValid;
+
     /**
      * bom编码
      */

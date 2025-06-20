@@ -14,56 +14,50 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
 
+
+/**
+ *   ERP基础数据跨库同步  oracle数据库    V1.1
+ */
 @Component
 @Slf4j
 public class GetErpDataJob {
 
-
 	@Resource
 	private AgvManageInfoService agvService;
-
-	@Resource
-	private MesItemStockService mesItemStockService;
 	@Resource
 	private MesToErpDataService mesToErpDataService;
-
 	private volatile String startTime = "2025-06-01 00:00:00";
 
 
-	// 【新增内部静态类，简化任务定义且不破坏原结构】
-	private static class Task {
-		final String name;
-		final Supplier<Integer> action;
-		Task(String name, Supplier<Integer> action) {
-			this.name = name;
-			this.action = action;
-		}
-	}
-
 
 	/**
-	 *  ERP基础数据同步  oracle数据库    V1.1
+	 *  ERP三基础数据同步  oracle数据库    V1.1
 	 *  同步、逐个执行
 	 */
 	@Scheduled(cron = "0 0/1 * * * ?")
 	public void syncErpToMes() {
 
-		// 【修正点1：将三段同步逻辑统一到一个任务列表中，避免重复代码】
+		// 【修正点1：将三段同步逻辑统一到一个任务列表中，避免重复代码】 	@Scheduled(cron = "0 0/1 * * * ?")
 		List<Task> tasks = Arrays.asList(
-				new Task("物料",       mesToErpDataService::syncItemStock),
-				new Task("BOM工序",    mesToErpDataService::syncProcedure),
+//				new Task("物料",       mesToErpDataService::syncItemStock)
+//				new Task("BOM工序",    mesToErpDataService::syncProcedure)
 	        	new Task("BOM用料",    mesToErpDataService::syncBomTree)
 		);
 
-		for (Task t : tasks) {
+ 		for (Task t : tasks) {
 			long startTime = System.currentTimeMillis(); // 【修正点2：为每个任务单独记录开始时间】
+			System.out.println("ERP拉取结果：" +  t.name);
 			log.info("开始加载{}...", t.name);
+			System.out.println("【多源同步开始】"+t.name);
 			try {
-				int count = t.action.get();              // 【修正点3：用方法引用调用，返回同步条数】
-				log.info("{}同步结束，同步数量：{} 条，耗时：{} ms",
-						t.name, count, System.currentTimeMillis() - startTime);
+				int count = t.action.get();              // 执行
+				log.info("【多源同步】{}同步结束，同步数量：{} 条，耗时：{} ms",  t.name, count, System.currentTimeMillis() - startTime);
+				Long tem =System.currentTimeMillis() - startTime;
+				System.out.println("【多源同步结束】"+t.name+"同步结束，同步数量："+count+"条，耗时："+tem+" ms");
+
 			} catch (Exception e) {
 				log.error("{}同步失败：", t.name, e);    // 【修正点4：每个任务独立捕获异常，互不影响】
+				System.err.println("【多源同步失败】"+ t.name+"同步失败："+e);
 			}
 		}
 
@@ -73,7 +67,6 @@ public class GetErpDataJob {
 	/**
 	 *  ERP基础数据同步  oracle数据库    V1.0
 	 */
-	@Scheduled(cron = "0 0/1 * * * ?")
 	public void syncErpToMesV1() {
 
 		long start = System.currentTimeMillis(); //当前时间
@@ -110,8 +103,21 @@ public class GetErpDataJob {
 	}
 
 
+	// 任务工具辅助方法
+	private static class Task {
+		final String name;
+		final Supplier<Integer> action;
+		Task(String name, Supplier<Integer> action) {
+			this.name = name;
+			this.action = action;
+		}
+	}
 
-	// ----------------------------------------------------------------------------------------------------------------------
+
+
+
+
+	//===========================旧===================================
 
 	/**
 	 *  ERP基础数据同步  oracle数据库  原始

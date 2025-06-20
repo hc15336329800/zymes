@@ -201,7 +201,7 @@
     <select id="selectBoms" resultType="cn.jb.boot.biz.item.entity.MesItemStock">
         SELECT id, item_no, bom_no
         from mes_item_stock mis
-        where item_type in (1, 2)
+        where item_type in ('01')
           and is_valid = '01'
           and updated_time>=#{startTime}
         order by id

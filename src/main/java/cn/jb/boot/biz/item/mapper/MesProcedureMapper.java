@@ -35,4 +35,19 @@ public interface MesProcedureMapper extends BaseMapper<MesProcedure> {
     List<ProcListResp> listNameByShortCode(@Param("p") ShortCodeReq params);
 
     List<ItemProcedureResponse> listProcedureByItem(@Param("p") ItemProcedureRequest params);
+
+
+    /**
+     * 根据物料编号和工序编码批量删除
+     * @param itemNos 物料编号列表
+     * @param procedureCodes 工序编码列表
+     * @return 删除记录数
+     */
+    int deleteByItemNoAndProcedureCode(
+            @Param("itemNos") List<String> itemNos,
+            @Param("procedureCodes") List<String> procedureCodes
+    );
+
+
+
 }
