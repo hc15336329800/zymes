@@ -87,13 +87,17 @@ public class MesToErpDataService {
 		try {
 			erpList = mesToErpDataMapper.materialMessage();
 			log.info("[物料同步] ERP拉取数量：{}", erpList == null ? 0 : erpList.size());
+			System.out.println("[物料同步] ERP拉取数量："+ erpList.size());
 		} catch (Exception e) {
 			log.error("[物料同步] ERP数据拉取失败", e);
+			System.out.println("[物料同步] ERP拉取数量："+ e);
+
 			return -1;
 		}
 
 		if (CollectionUtils.isEmpty(erpList)) {
 			log.info("[物料同步] 无待同步数据");
+			System.out.println("[物料同步] 无待同步数据");
 			return 0;
 		}
 
@@ -117,8 +121,11 @@ public class MesToErpDataService {
 								.in("item_no", erpItemCodes)
 				);
 				log.info("[物料同步] 已删除{}条旧物料", deletedCount);
+				System.out.println("[物料同步] 已删除{}条旧物料"+deletedCount);
+
 			} catch (Exception e) {
 				log.error("[物料同步] 删除旧物料失败", e);
+				System.out.println("[物料同步] 删除旧物料失败"+ e);
 				return -2;
 			}
 		}
@@ -174,6 +181,7 @@ public class MesToErpDataService {
 		// =============== 5. 批量新增数据 ===============
 		if (CollectionUtils.isEmpty(toSave)) {
 			log.warn("[物料同步] 无有效物料需要保存");
+			System.out.println("[物料同步] 无有效物料需要保存 ");
 			return 0;
 		}
 
@@ -190,6 +198,7 @@ public class MesToErpDataService {
 			log.info("[物料同步] 成功新增{}条物料", saveCount);
 		} catch (Exception e) {
 			log.error("[物料同步] 新增物料失败", e);
+			System.out.println("[物料同步] 新增物料失败 "+ e);
 			return -3;
 		}
 
@@ -204,8 +213,11 @@ public class MesToErpDataService {
 					mesToErpDataMapper.materUpdate(batchCodes);
 				}
 				log.info("[物料同步] 已回写ERP状态，共{}条", erpItemCodes.size());
+				System.out.println("[物料同步] 已回写ERP状态，共{}条 "+ erpItemCodes.size() );
+
 			} catch (Exception e) {
 				log.error("[物料同步] ERP回写失败", e);
+				System.out.println("[物料同步]  ERP回写失败"+ e);
 				return -4;
 			}
 		}

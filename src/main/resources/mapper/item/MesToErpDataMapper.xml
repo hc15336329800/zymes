@@ -9,12 +9,12 @@
 
     <!-- 查询未同步物料 -->
     <select id="materialMessage" resultType="java.util.Map">
-        SELECT * FROM JSPMATERIAL WHERE BYTSTATUS = 1
+        SELECT * FROM JSP.JSPMATERIAL WHERE BYTSTATUS = 1
     </select>
 
     <!-- 批量更新同步状态 -->
     <update id="materUpdate" parameterType="java.util.List">
-        UPDATE JSPMATERIAL
+        UPDATE  JSP.JSPMATERIAL
         SET BYTSTATUS = 0
         WHERE STRITEMCODE IN
         <foreach item="itemNo" collection="itemNoList" open="(" separator="," close=")">

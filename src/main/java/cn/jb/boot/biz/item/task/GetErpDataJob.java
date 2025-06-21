@@ -39,15 +39,15 @@ public class GetErpDataJob {
 
 		// 【修正点1：将三段同步逻辑统一到一个任务列表中，避免重复代码】 	@Scheduled(cron = "0 0/1 * * * ?")
 		List<Task> tasks = Arrays.asList(
-				new Task("物料",       mesToErpDataService::syncItemStock),
-				new Task("BOM工序",    mesToErpDataService::syncProcedure),
-	        	new Task("BOM用料",    mesToErpDataService::syncBomTree)
+				new Task("物料",       mesToErpDataService::syncItemStock)
+//				new Task("BOM工序",    mesToErpDataService::syncProcedure),
+//	        	new Task("BOM用料",    mesToErpDataService::syncBomTree)
 		);
 
  		for (Task t : tasks) {
 			long startTime = System.currentTimeMillis(); // 【修正点2：为每个任务单独记录开始时间】
-			System.out.println("ERP拉取结果：" +  t.name);
-			log.info("开始加载{}...", t.name);
+//			System.out.println("ERP拉取结果：" +  t.name);
+//			log.info("开始加载{}...", t.name);
 			System.out.println("【多源同步开始】"+t.name);
 			try {
 				int count = t.action.get();              // 执行
