@@ -79,9 +79,9 @@ public class GetMesDataJob {
 	public void  process() {
 		System.out.println("Info:   工序内部同步 （频率一分钟） 未开启");
 		//        补全缺失的中间工序记录：如果 mes_procedure 有但 t_mid_item_stock 中没有，就插入t_mid_item_stock
-		//		addUpdateMidItemStock();
+				addUpdateMidItemStock();
 		//        动态更新当前进展工序标识和初始库存数量，更新 last_flag = '01' 与 initial_count
-		//		updateMidItemStock();
+				updateMidItemStock();
 	}
 
 
