@@ -24,15 +24,24 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableTransactionManagement
 @EnableAsync
 @SpringBootApplication(scanBasePackages = {"cn.jb"}, exclude = SecurityAutoConfiguration.class)
-@Slf4j
-public class MesApplication extends SpringBootServletInitializer implements CommandLineRunner {
+@Slf4j   //implements CommandLineRunner
+public class MesApplication extends SpringBootServletInitializer implements CommandLineRunner  {
 
     public static void main(String[] args) {
 
         // 启动Spring Boot应用
+//        System.out.println("✅ main 开始运行...");
+//        SpringApplication.run(MesApplication.class, args);
+//        System.out.println("✅ Spring Boot 启动完成！");
+
         System.out.println("✅ main 开始运行...");
-        SpringApplication.run(MesApplication.class, args);
-        System.out.println("✅ Spring Boot 启动完成！");
+        try {
+            SpringApplication.run(MesApplication.class, args);
+            System.out.println("✅ Spring Boot 启动完成！");
+        } catch (Throwable e) {
+            System.err.println("❌ 启动失败：");
+            e.printStackTrace(); // 关键！
+        }
 
     }
 
@@ -48,7 +57,7 @@ public class MesApplication extends SpringBootServletInitializer implements Comm
         String tableName = "JSP.JSPBOM";  // 要检查的表名
 
 
-//        String url = "jdbc:oracle:thin:@127.0.0.1:1521/XEPDB1";
+//        String url = "jdbc:oracle:thin:@//127.0.0.1:1521/XEPDB1";
 //        String username = "jsp";
 //        String password = "root123456";
 //        String tableName = "JSPBOM";  // 要检查的表名
