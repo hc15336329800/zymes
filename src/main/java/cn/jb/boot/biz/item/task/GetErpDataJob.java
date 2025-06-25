@@ -39,9 +39,9 @@ public class GetErpDataJob {
 
 		// 【修正点1：将三段同步逻辑统一到一个任务列表中，避免重复代码】 	@Scheduled(cron = "0 0/1 * * * ?")
 		List<Task> tasks = Arrays.asList(
-				new Task("物料",       mesToErpDataService::syncItemStock)
-//				new Task("BOM工序",    mesToErpDataService::syncProcedure),
-//	        	new Task("BOM用料",    mesToErpDataService::syncBomTree)
+				new Task("物料",       mesToErpDataService::syncItemStock),
+				new Task("BOM工序",    mesToErpDataService::syncProcedure),
+	        	new Task("BOM用料",    mesToErpDataService::syncBomTree)
 		);
 
  		for (Task t : tasks) {

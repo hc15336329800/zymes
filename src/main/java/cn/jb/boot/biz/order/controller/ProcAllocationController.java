@@ -90,6 +90,7 @@ public class ProcAllocationController {
 
 
     // 点击保存工序后，进入工单管理页面
+//    工序分配列表页面>>>保存按钮
     @PostMapping("/alloc_proc_v1")
     @Operation(summary = "工序分配")
     public BaseResponse<String> createWorkOrder(@RequestBody @Valid BaseRequest<BatchProcAllocReq> request) {
