@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GetMesDataJob {
 
-	private volatile String startTime = "2025-06-20 13:00:00";
+	private volatile String startTime = "2025-06-28 14:50:00";
 	@Resource
 	private MidItemStockService midItemStockService;
 	@Resource
@@ -62,12 +62,12 @@ public class GetMesDataJob {
 	 */
 //	@Scheduled(cron = "0 0/15 * * * ?")
 	public void bom() {
- 		System.out.println("Info:   bom内部同步 （频率一分钟）开启");
+ 		System.out.println("Info:   bom内部同步开启");
 				long start = System.currentTimeMillis();
 				log.info("开始加载BOM用料...");
 		bomUsedService.load(startTime);
 				log.info("加载BOM用料完成...cost:{}", System.currentTimeMillis() - start);
-				startTime = DateUtil.formatDateTime(LocalDateTime.now());
+				startTime = DateUtil.formatDateTime(LocalDateTime.now());   //注意重置时间
 	}
 
 	//===========================同步工序 及 中间件量===================================
