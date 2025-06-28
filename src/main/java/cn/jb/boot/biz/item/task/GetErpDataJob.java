@@ -34,7 +34,7 @@ public class GetErpDataJob {
 	 *  ERP三基础数据同步  oracle数据库    V1.1
 	 *  同步、逐个执行
 	 */
-	@Scheduled(cron = "0 0/1 * * * ?")
+//	@Scheduled(cron = "0 0/10 * * * ?")
 	public void syncErpToMes() {
 
 		// 【修正点1：将三段同步逻辑统一到一个任务列表中，避免重复代码】 	@Scheduled(cron = "0 0/1 * * * ?")

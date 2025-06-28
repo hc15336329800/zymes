@@ -60,7 +60,7 @@ public class GetMesDataJob {
 	 *
 	 *
 	 */
-	@Scheduled(cron = "0 0/3 * * * ?")
+//	@Scheduled(cron = "0 0/15 * * * ?")
 	public void bom() {
  		System.out.println("Info:   bom内部同步 （频率一分钟）开启");
 				long start = System.currentTimeMillis();
@@ -75,7 +75,7 @@ public class GetMesDataJob {
 	/**
 	 * 内部同步 : 工序新增+物料工序新增   自动同步
 	 */
-	@Scheduled(cron = "0 0/1 * * * ?")
+	@Scheduled(cron = "0 0/10 * * * ?")
 	public void  process() {
 		System.out.println("Info:   工序内部同步 （频率一分钟） 未开启");
 		//        补全缺失的中间工序记录：如果 mes_procedure 有但 t_mid_item_stock 中没有，就插入t_mid_item_stock

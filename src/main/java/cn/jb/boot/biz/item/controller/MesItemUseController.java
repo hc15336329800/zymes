@@ -3,6 +3,8 @@ package cn.jb.boot.biz.item.controller;
 import cn.jb.boot.biz.item.mapper.BomUsedMapper;
 import cn.jb.boot.biz.item.service.impl.BomTreeServiceImpl;
 import cn.jb.boot.biz.item.service.impl.ItemUseUploadServiceImpl;
+import cn.jb.boot.biz.item.task.GetErpDataJob;
+import cn.jb.boot.biz.item.task.GetMesDataJob;
 import cn.jb.boot.biz.item.vo.request.MesItemUseUpdateRequest;
 import cn.jb.boot.framework.com.entity.ComId;
 import cn.jb.boot.framework.com.request.BaseRequest;
@@ -43,6 +45,47 @@ public class MesItemUseController {
 
     @Resource
     private MesItemUseService service;
+
+    @Resource
+    private GetMesDataJob getMesDataJob; // 注入内部同步任务类
+
+    @Resource
+    private GetErpDataJob getErpDataJob; // 注入外部同步任务类
+
+
+    ////////////////////////////////////////////更新测试/////////////////////////////////////////////
+
+    //todo: 增加两个接口   内部同步调用 bom()      外部同步调用syncErpToMes()
+
+
+    /**
+     * 内部同步 BOM 树（触发 GetMesDataJob 的 bom 方法）
+     */
+    @PostMapping("/inner_sync_bom")
+    @Operation(summary = "内部同步BOM树")
+    public AjaxResult innerSyncBom() {
+        try {
+            getMesDataJob.bom();
+            return AjaxResult.success("内部同步BOM树完成");
+        } catch (Exception e) {
+            return AjaxResult.error("内部同步BOM树失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 外部同步 ERP 数据到 MES（触发 GetErpDataJob 的 syncErpToMes 方法）
+     */
+    @PostMapping("/sync_erp_to_mes")
+    @Operation(summary = "外部同步ERP数据到MES")
+    public AjaxResult syncErpToMes() {
+        try {
+            getErpDataJob.syncErpToMes();
+            return AjaxResult.success("外部同步ERP数据到MES完成");
+        } catch (Exception e) {
+            return AjaxResult.error("外部同步ERP数据到MES失败: " + e.getMessage());
+        }
+    }
+
 
 
     ////////////////////////////////////////////重写上传逻辑/////////////////////////////////////////////

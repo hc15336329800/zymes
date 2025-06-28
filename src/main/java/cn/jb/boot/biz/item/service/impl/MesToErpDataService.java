@@ -474,6 +474,9 @@ public class MesToErpDataService {
 	/**
 	 * bom同步 V1.0
 	 * 仅同步 ERP（JSPBOM）表 BYTSTATUS=0 的BOM用料树
+	 * JSPBOM (ERP) :   拉取 BOM 用料数据（BYTSTATUS=0）
+	 * mes_item_use  ： INSERT 或 UPDATE（批量）：插入或更新 MES 的用料明细（树的跟节点）
+	 *
 	 *
 	 * @return 同步数量
 	 */
