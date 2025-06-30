@@ -96,8 +96,8 @@ public class MesToErpDataService {
 		}
 
 		if (CollectionUtils.isEmpty(erpList)) {
-			log.info("[物料同步] 无待同步数据");
-			System.out.println("[物料同步] 无待同步数据");
+//			log.info("[物料同步] 无待同步数据");
+//			System.out.println("[物料同步] 无待同步数据");
 			return 0;
 		}
 
@@ -663,8 +663,8 @@ public class MesToErpDataService {
 			// 加工工时（定额工时）
 			p.setHoursFixed(safeParseDecimal(erpItem.get("DBLROUTERATIONTIME")));
 			// 实际工时
-//			p.setHoursWork(safeParseDecimal(erpItem.get("DBLROUTEPROCESSTIME"))); // 注意这里和hoursFixed使用相同字段
-			p.setHoursWork(safeParseDecimal(erpItem.get("DBLROUTERATIONTIME"))); // 注意这里和hoursFixed使用相同字段
+			//p.setHoursWork(safeParseDecimal(erpItem.get("DBLROUTEPROCESSTIME"))); // 注意这里和hoursFixed使用相同字段
+			p.setHoursWork(safeParseDecimal(erpItem.get("DBLROUTERATIONTIME"))); // 临时补丁，注意这里和hoursFixed使用相同字段
 
 
 			// 准备工时

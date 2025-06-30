@@ -1,7 +1,6 @@
 package cn.jb.boot.biz.item.task;
 
 
-import cn.jb.boot.biz.agvcar.service.AgvManageInfoService;
 import cn.jb.boot.biz.item.entity.MesItemStock;
 import cn.jb.boot.biz.item.entity.MesProcedure;
 import cn.jb.boot.biz.item.entity.MidItemStock;
@@ -15,7 +14,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -26,9 +24,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 
-
 /**
- *  MES内部基础数据同步      V1.1
+ * MES内部基础数据同步      V1.1
  */
 @Component
 @Slf4j
@@ -45,7 +42,7 @@ public class GetMesDataJob {
 	@Resource
 	private BomUsedService bomUsedService;
 
- 	private static final String lastName = "装车";
+	private static final String lastName = "装车";
 
 	//===========================同步物料===================================
 
@@ -55,21 +52,19 @@ public class GetMesDataJob {
 
 
 	/**
-	 *  内部同步bom树
+	 * 内部同步bom树
 	 * 读取：mes_item_stock, mes_item_use     删除/插入：t_bom_used
-	 *
-	 *
 	 */
 //	@Scheduled(cron = "0 0/15 * * * ?")
 	public void bom() {
- 		System.out.println("Info:   bom内部同步开启");
-				long start = System.currentTimeMillis();
-				log.info("开始加载BOM用料...");
-		bomUsedService.load(startTime);
-				log.info("加载BOM用料完成...cost:{}", System.currentTimeMillis() - start);
-				startTime = DateUtil.formatDateTime(LocalDateTime.now());   //注意重置时间
 
-		System.out.println("Info:  同步重置时间"+startTime);
+		long start = System.currentTimeMillis();
+		log.info("开始加载BOM用料...");
+		bomUsedService.load(startTime);
+		log.info("加载BOM用料完成...cost:{}", System.currentTimeMillis() - start);
+		startTime = DateUtil.formatDateTime(LocalDateTime.now());   //注意重置时间
+
+		System.out.println("Info:  同步重置时间" + startTime);
 
 	}
 
@@ -78,13 +73,13 @@ public class GetMesDataJob {
 	/**
 	 * 内部同步 : 工序新增+物料工序新增   自动同步
 	 */
-	@Scheduled(cron = "0 0/10 * * * ?")
-	public void  process() {
-		System.out.println("Info:   工序内部同步 （频率一分钟） 未开启");
+//	@Scheduled(cron = "0 0/10 * * * ?")
+	public void process() {
+
 		//        补全缺失的中间工序记录：如果 mes_procedure 有但 t_mid_item_stock 中没有，就插入t_mid_item_stock
-				addUpdateMidItemStock();
+		addUpdateMidItemStock();
 		//        动态更新当前进展工序标识和初始库存数量，更新 last_flag = '01' 与 initial_count
-				updateMidItemStock();
+		updateMidItemStock();
 	}
 
 
@@ -175,7 +170,6 @@ public class GetMesDataJob {
 		// 8. 更新 startTime 为当前时间，用于下次增量更新（通常在定时任务中）
 		startTime = DateUtil.formatDateTime(LocalDateTime.now());
 	}
-
 
 
 }
