@@ -68,6 +68,9 @@ public class GetMesDataJob {
 		bomUsedService.load(startTime);
 				log.info("加载BOM用料完成...cost:{}", System.currentTimeMillis() - start);
 				startTime = DateUtil.formatDateTime(LocalDateTime.now());   //注意重置时间
+
+		System.out.println("Info:  同步重置时间"+startTime);
+
 	}
 
 	//===========================同步工序 及 中间件量===================================

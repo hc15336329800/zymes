@@ -663,7 +663,10 @@ public class MesToErpDataService {
 			// 加工工时（定额工时）
 			p.setHoursFixed(safeParseDecimal(erpItem.get("DBLROUTERATIONTIME")));
 			// 实际工时
-			p.setHoursWork(safeParseDecimal(erpItem.get("DBLROUTEPROCESSTIME"))); // 注意这里和hoursFixed使用相同字段
+//			p.setHoursWork(safeParseDecimal(erpItem.get("DBLROUTEPROCESSTIME"))); // 注意这里和hoursFixed使用相同字段
+			p.setHoursWork(safeParseDecimal(erpItem.get("DBLROUTERATIONTIME"))); // 注意这里和hoursFixed使用相同字段
+
+
 			// 准备工时
 			p.setHoursPrepare(safeParseDecimal(erpItem.get("DBLROUTEPREPARETIME")));
 
