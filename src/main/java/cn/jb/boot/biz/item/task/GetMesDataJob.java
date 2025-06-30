@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GetMesDataJob {
 
-	private volatile String startTime = "2025-06-28 14:50:00";
+
 	@Resource
 	private MidItemStockService midItemStockService;
 	@Resource
@@ -43,6 +43,9 @@ public class GetMesDataJob {
 	private BomUsedService bomUsedService;
 
 	private static final String lastName = "装车";
+
+	private volatile String startTime = "2025-06-30 12:00:00";  //内部BOM依赖从这个日期开始更新 ！
+
 
 	//===========================同步物料===================================
 

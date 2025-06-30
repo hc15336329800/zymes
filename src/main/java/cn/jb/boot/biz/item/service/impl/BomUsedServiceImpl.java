@@ -211,6 +211,17 @@ public class BomUsedServiceImpl extends ServiceImpl<BomUsedMapper, BomUsed> impl
                 // 拼接路径字符串
                 appendNos(itemNos, used);
                 list.add(used);
+
+
+
+                // 临时修补，还未验证！
+                // 查询 use_item_no 的物料类型，判断是否继续递归
+                MesItemStock stock = stockMapper.selectById(miu.getUseItemNo());
+                if (stock != null && "00".equals(stock.getItemType())) {
+                    // 原材料，不再递归
+                    continue;
+                }
+
                 // 递归查找下一级子项
                 findChildUse(miu.getUseItemNo(), used.getItemNos(), count, list);
             }

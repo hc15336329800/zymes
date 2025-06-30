@@ -31,14 +31,6 @@ public class GetErpDataJob {
 	private GetMesDataJob getMesDataJob; // 新增：注入 GetMesDataJob
 
 
-	private volatile String startTime = "2025-06-01 00:00:00";
-
-	private volatile String  STime = "2025-06-28 14:50:00";
-
-
-
-
-
 	private volatile boolean running = false; // 防止重复执行标志位
 
 
@@ -174,16 +166,15 @@ public class GetErpDataJob {
 	}
 
 
-
+	private volatile String  STime = "2025-06-28 14:50:00";
 
 	/**
 	 *  ERP三基础数据同步  oracle数据库    V1.1
 	 *  同步、逐个执行
 	 */
-//	@Scheduled(cron = "0 0/10 * * * ?")
 	public void syncErpToMesV11() {
 
-		// 【修正点1：将三段同步逻辑统一到一个任务列表中，避免重复代码】 	@Scheduled(cron = "0 0/1 * * * ?")
+		// 【修正点1：将三段同步逻辑统一到一个任务列表中，避免重复代码】
 		List<Task> tasks = Arrays.asList(
 				new Task("物料",       mesToErpDataService::syncItemStock),
 				new Task("BOM工序",    mesToErpDataService::syncProcedure),
@@ -276,6 +267,7 @@ public class GetErpDataJob {
 
 	//===========================旧===================================
 
+	private volatile String startTime = "2025-06-01 00:00:00";
 	/**
 	 *  ERP基础数据同步  oracle数据库  原始
 	 */
