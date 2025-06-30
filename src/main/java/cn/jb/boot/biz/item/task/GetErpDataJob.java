@@ -39,7 +39,7 @@ public class GetErpDataJob {
 	 *   外部ERP三同步+内部BOM和工序同步       V1.3
 	 *  同步、逐个执行
 	 */
-	@Scheduled(cron = "0 0/10 * * * ?")
+//	@Scheduled(cron = "0 0/10 * * * ?")
 	public void syncErpToMes() {
 		if (running) {
 			log.warn("======【同步任务正在执行，跳过本次调度】======");

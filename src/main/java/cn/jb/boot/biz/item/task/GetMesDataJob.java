@@ -44,7 +44,8 @@ public class GetMesDataJob {
 
 	private static final String lastName = "装车";
 
-	private volatile String startTime = "2025-06-30 12:00:00";  //内部BOM依赖从这个日期开始更新 ！
+//	private volatile String startTime = "2025-06-30 17:39:00";  //内部BOM依赖从这个日期开始更新 ！
+	private volatile String startTime = "2025-06-30 16:37:00";  //内部BOM依赖从这个日期开始更新 ！
 
 
 	//===========================同步物料===================================
@@ -65,9 +66,10 @@ public class GetMesDataJob {
 		log.info("开始加载BOM用料...");
 		bomUsedService.load(startTime);
 		log.info("加载BOM用料完成...cost:{}", System.currentTimeMillis() - start);
-		startTime = DateUtil.formatDateTime(LocalDateTime.now());   //注意重置时间
 
-		System.out.println("Info:  同步重置时间" + startTime);
+
+//		startTime = DateUtil.formatDateTime(LocalDateTime.now());   //注意重置时间
+//		System.out.println("Info:  同步重置时间" + startTime);
 
 	}
 

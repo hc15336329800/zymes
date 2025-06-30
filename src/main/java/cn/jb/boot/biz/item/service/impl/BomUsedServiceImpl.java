@@ -22,9 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -137,7 +135,10 @@ public class BomUsedServiceImpl extends ServiceImpl<BomUsedMapper, BomUsed> impl
         List<BomUsed> list = new ArrayList<>();
         try {
             // 从当前物料开始递归查找子项用料数据
-            findChildUse(itemNo, itemNo, BigDecimal.ONE, list);
+//            findChildUse(itemNo, itemNo, BigDecimal.ONE, list);
+            findChildUse(itemNo, itemNo, BigDecimal.ONE, list, new HashSet<String>(), 1);
+
+
         } catch (Throwable e) {
             // 如果递归过程中出错，记录错误日志
             log.error("同步bom异常的,itemNo:{}", itemNo);
@@ -185,22 +186,35 @@ public class BomUsedServiceImpl extends ServiceImpl<BomUsedMapper, BomUsed> impl
      * @param rate     累计数量倍率
      * @param list     用于收集结果的列表
      */
-    private void findChildUse(String itemNo, String itemNos, BigDecimal rate, List<BomUsed> list) {
-        // 查询当前物料的所有用料明细
+    private void findChildUse(String itemNo, String itemNos, BigDecimal rate, List<BomUsed> list, Set<String> visited, int depth)
+    {
+        if (visited.contains(itemNo)) {
+            log.warn("检测到循环依赖: {}", itemNo);
+            return;
+        }
+        visited.add(itemNo);
+
+        if (depth > 20) {
+            log.warn("超过最大层级保护: {}, 当前层级: {}", itemNo, depth);
+            return;
+        }
+
         List<MesItemUse> useList = useMapper.selectList(
                 new LambdaQueryWrapper<MesItemUse>()
                         .eq(MesItemUse::getItemNo, itemNo)
         );
+
         if (CollectionUtils.isNotEmpty(useList)) {
             for (MesItemUse miu : useList) {
-                // 跳过自身依赖
+
+
+                // 防止自己依赖自己，立即跳过
                 if (itemNo.equals(miu.getUseItemNo())) {
+                    log.warn("检测到自己依赖自己: {}, 自动跳过", itemNo);
                     continue;
                 }
-                // 计算数量 = 累计倍率 * 用料数量，保留 3 位小数向下取整
-                BigDecimal count = ArithUtil.mul(rate, miu.getUseItemCount())
-                        .setScale(3, RoundingMode.DOWN);
-                // 构造新的 BomUsed 对象
+
+                BigDecimal count = ArithUtil.mul(rate, miu.getUseItemCount()).setScale(3, RoundingMode.DOWN);
                 BomUsed used = new BomUsed();
                 used.setUsedId(miu.getId());
                 used.setParentCode(miu.getItemNo());
@@ -208,25 +222,19 @@ public class BomUsedServiceImpl extends ServiceImpl<BomUsedMapper, BomUsed> impl
                 used.setUseItemType(miu.getUseItemType());
                 used.setUseItemCount(count);
                 used.setFixedUsed(miu.getFixedUse());
-                // 拼接路径字符串
                 appendNos(itemNos, used);
                 list.add(used);
 
-
-
-                // 临时修补，还未验证！
-                // 查询 use_item_no 的物料类型，判断是否继续递归
                 MesItemStock stock = stockMapper.selectById(miu.getUseItemNo());
                 if (stock != null && "00".equals(stock.getItemType())) {
-                    // 原材料，不再递归
                     continue;
                 }
 
-                // 递归查找下一级子项
-                findChildUse(miu.getUseItemNo(), used.getItemNos(), count, list);
+                findChildUse(miu.getUseItemNo(), used.getItemNos(), count, list, visited, depth + 1);
             }
         }
     }
+
 
     /**
      * 将当前节点编码追加到父路径字符串后，构造新的路径，并设置到 BomUsed 对象中
