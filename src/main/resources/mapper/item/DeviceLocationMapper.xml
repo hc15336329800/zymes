@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.item.mapper.DeviceLocationMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, device, station,location,agvlocation,updated_by, updated_time, created_by, created_time,status
+    </sql>
+
+    <select id="pageInfo" resultType="cn.jb.boot.biz.item.vo.response.DeviceLocationPageResponse"
+            parameterType="cn.jb.boot.biz.item.vo.request.DeviceLocationCreateRequest">
+        select
+        <include refid="Base_Column_List"/>
+        from t_device_location
+        <where>
+            <if test="p.device != null and p.device != ''">
+                and device like concat('%',#{p.device},'%')
+            </if>
+            <if test="p.status != null and p.status != ''">
+                and status = #{p.status}
+            </if>
+        </where>
+        order by created_time desc
+    </select>
+
+    <select id="selectAGVLocation" resultType="java.util.Map" parameterType="java.util.Map">
+        select
+        <include refid="Base_Column_List"/>
+        from t_device_location
+        <where> 1=1
+            <if test="Station != null and Station != ''">
+                and station like concat('%',#{Station},'%')
+            </if>
+            <if test="Location != null and Location != ''">
+                and location like concat('%',#{Location},'%')
+            </if>
+        </where>
+        limit 1;
+    </select>
+    <select id="getEmportLocation1" resultType="java.util.Map" parameterType="java.util.Map">
+        select * from t_device_location
+        where status = '1'
+        and agvlocation in
+        <foreach collection="locationList" item="location" close=")" open="(" separator=",">
+            #{location}
+        </foreach>
+        order by agvlocation
+    </select>
+    <select id="getEmportLocation2" resultType="java.util.Map" parameterType="java.util.Map">
+        select * from t_device_location
+        where status = '1'
+        and agvlocation in
+        <foreach collection="locationList" item="location" close=")" open="(" separator=",">
+            #{location}
+        </foreach>
+        order by agvlocation
+    </select>
+
+    <update id="updateEmportLocation" parameterType="java.util.Map">
+        update t_device_location set status = #{status}
+        where agvlocation = #{agvlocation}
+    </update>
+
+    <select id="selectLocationStatus" resultType="java.util.Map" parameterType="java.util.Map">
+        select
+        agvlocation,status
+        from t_device_location
+        where agvlocation in ('T3-2','Q')
+    </select>
+</mapper>

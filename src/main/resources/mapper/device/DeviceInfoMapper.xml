@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.device.mapper.DeviceInfoMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, device_name, device_no, brand, manufacturer, dept_id, data_status, updated_by, updated_time, created_by,
+        created_time,type_id,is_valid
+    </sql>
+
+    <select id="pageInfo" resultType="cn.jb.boot.biz.device.vo.response.DeviceInfoPageResponse"
+            parameterType="cn.jb.boot.biz.device.vo.request.DeviceInfoPageRequest">
+        select
+        di.id, di.device_name, di.device_no, di.brand, di.manufacturer, di.dept_id, di.data_status,
+        di.created_time,dti.name typeName
+        from t_device_info di inner join t_device_type_info dti on di.type_id=dti.id
+        <where>
+            is_valid='01'
+            <if test="p.typeId != null and p.typeId != ''">
+                and di.type_id =#{p.typeId}
+            </if>
+            <if test="p.deviceName != null and p.deviceName != ''">
+                and di.device_name like concat('%',#{p.deviceName},'%')
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and di.created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and di.created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+        </where>
+        order by di.created_time desc
+    </select>
+    <select id="selected" resultType="cn.jb.boot.system.vo.DictDataVo">
+        select id, id dict_value, device_name dict_label,device_no name,1 dictSort
+        from t_device_info mis
+    </select>
+    <select id="deviceTypeCount" resultType="java.util.Map">
+        SELECT
+	       info.type_id,
+	       typeinfo.NAME as typeName,
+	       count(*) as count
+        FROM
+	       t_device_info info
+	    INNER JOIN t_device_type_info typeinfo ON info.type_id = typeinfo.id
+        GROUP BY info.type_id,typeinfo.NAME
+    </select>
+</mapper>

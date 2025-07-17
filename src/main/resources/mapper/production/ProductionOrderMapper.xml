@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.production.mapper.ProductionOrderMapper">
+
+    <sql id="Base_Column_List">
+        id, sales_order_no, order_type,item_no, item_count, status, biz_type, deliver_time, outer_state, place_id, procedure_code, procedure_name,  updated_by, updated_time, created_by, created_time
+    </sql>
+
+
+    <select id="pageList" resultType="cn.jb.boot.biz.production.vo.resp.ProductionOrderPageResponse">
+        SELECT
+        p.id,
+        p.sales_order_no,
+        p.item_no,
+        p.item_count,
+        p.status,
+        p.biz_type,
+        p.deliver_time,
+        p.outer_state,
+        p.place_id,
+        p.procedure_code,
+        p.procedure_name,
+        p.updated_by,
+        p.updated_time,
+        p.created_by,
+        p.created_time,
+        p.order_type,
+        s.item_name AS itemName,
+        s.bom_no AS bomNo
+        FROM
+        t_production_order p
+        LEFT JOIN mes_item_stock s ON p.item_no = s.item_no
+        <where>
+            <if test="p.salesOrderNo !=null and p.salesOrderNo !=''">
+                AND p.sales_order_no LIKE CONCAT('%',#{p.salesOrderNo},'%')
+            </if>
+            <if test='p.itemNos != null and p.itemNos.size()>0'>
+                AND p.item_no in
+                <foreach collection="p.itemNos" item="itemNo" open="(" close=")" separator=",">
+                    #{itemNo}
+                </foreach>
+            </if>
+            <if test='p.bizType != null and p.bizType !=""'>
+                AND p.biz_type = #{p.bizType}
+            </if>
+            <if test='p.status != null and p.status !=""'>
+                AND p.status = #{p.status}
+            </if>
+            <if test='(p.status == null or p.status == "")'>
+                AND p.status = '01'
+            </if>
+        </where>
+        ORDER BY p.updated_time DESC
+    </select>
+
+
+
+
+    <!--    <select id="pageList" resultType="cn.jb.boot.biz.production.vo.resp.ProductionOrderPageResponse">-->
+<!--        select <include refid="Base_Column_List"/>-->
+<!--        from t_production_order-->
+<!--        <where>-->
+
+<!--            <if test="p.salesOrderNo !=null and p.salesOrderNo !=''">-->
+<!--                and sales_order_no LIKE CONCAT('%',#{p.salesOrderNo},'%')-->
+<!--            </if>-->
+<!--            <if test='p.itemNos != null and p.itemNos.size()>0'>-->
+<!--                AND item_no in-->
+<!--                <foreach collection="p.itemNos" item="itemNo" index="index" open="(" close=")" separator=",">-->
+<!--                    #{itemNo}-->
+<!--                </foreach>-->
+<!--            </if>-->
+<!--            <if test='p.bizType != null and p.bizType !=""'>-->
+<!--                AND biz_type = #{p.bizType}-->
+<!--            </if>-->
+<!--            <if test='p.status != null and p.status !=""'>-->
+<!--                AND status = #{p.status}-->
+<!--            </if>-->
+<!--        </where>-->
+
+<!--        order by updated_time desc-->
+
+
+
+<!--    </select>-->
+
+
+</mapper>

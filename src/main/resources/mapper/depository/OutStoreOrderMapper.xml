@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.depository.mapper.OutStoreOrderMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, biz_id, biz_type, item_no, dept_id, out_status, out_time, out_user, assign_count, use_item_no, plan_count,
+        real_count, review_status, review_by, updated_by, updated_time, created_by, created_time
+    </sql>
+
+    <select id="pageInfo" resultType="cn.jb.boot.biz.depository.vo.response.OutStoreOrderPageResponse"
+            parameterType="cn.jb.boot.biz.depository.vo.request.OutStoreOrderPageRequest">
+        select
+        oso.id, oso.item_no, oso.dept_id, oso.out_status, oso.out_time, oso.out_user, oso.assign_count, oso.use_item_no,
+        oso.plan_count, oso.real_count, oso.review_status,
+        oso.review_by, oso.created_time,mis.item_name useItemName,mis.item_count
+        from t_out_store_order oso inner join mes_item_stock mis on mis.item_no=oso.use_item_no
+        <where>
+            <if test="p.itemNo != null and p.itemNo  != ''">
+                and oso.item_no=#{p.itemNo}
+            </if>
+            <if test="p.deptId != null and p.deptId   != ''">
+                and oso.dept_id=#{p.deptId}
+            </if>
+            <if test="p.useItemNo != null and p.useItemNo   != ''">
+                and oso.use_item_no like concat('%',#{p.useItemNo},'%')
+            </if>
+            <if test="p.outStatus != null and p.outStatus   != ''">
+                and oso.out_status=#{p.outStatus}
+            </if>
+            <if test="p.reviewStatus != null and p.reviewStatus   != ''">
+                and oso.review_status=#{p.reviewStatus}
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and oso.created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and oso.created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+        </where>
+        order by oso.created_time desc
+    </select>
+</mapper>

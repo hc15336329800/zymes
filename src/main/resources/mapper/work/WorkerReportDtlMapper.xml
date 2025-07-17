@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.work.mapper.WorkerReportDtlMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, user_id, group_id, group_uid, report_type, report_count, user_count, report_id, work_order_id, updated_by,
+        updated_time, created_by, created_time
+    </sql>
+
+
+
+    <!-- 查询所有（不分页，导出用）
+         导出工人报工工资明细（按条件查询并导出Excel） -->
+<!--    <select id="detailPageListAll" resultType="cn.jb.boot.biz.work.vo.response.WorkerReportDtlPageResponse">-->
+<!--        select-->
+<!--        two.item_no,                             &#45;&#45; 产品编码-->
+<!--        twrd.user_count user_count,              &#45;&#45; 加工件数（工时数）-->
+<!--        twrd.user_count * two.hours_fixed wages, &#45;&#45; 工资 = 工时数 * 单价-->
+<!--        two.procedure_name,                      &#45;&#45; 工序名称-->
+<!--        two.hours_fixed,                         &#45;&#45; 单价（标准工时/单价）-->
+<!--        two.work_order_no,                       &#45;&#45; 工单号-->
+<!--        twrd.user_id,                            &#45;&#45; 工人ID-->
+<!--        twrd.created_time,                       &#45;&#45; 报工时间（精确到秒）-->
+<!--        tod.order_no                             &#45;&#45; 订单号-->
+<!--        from t_worker_report_dtl twrd-->
+<!--        inner join t_work_order two on twrd.work_order_id = two.id       &#45;&#45; 关联工单表，获取工序/工时等信息-->
+<!--        left join t_order_dtl tod on two.order_dtl_id = tod.id           &#45;&#45; 关联订单明细表，获取订单号-->
+<!--        <where>-->
+<!--            <if test="procedureNames != null and procedureNames.size() > 0 ">-->
+<!--                and two.procedure_name in-->
+<!--                <foreach collection="procedureNames" item="name" index="index" open="(" close=")" separator=",">-->
+<!--                    #{name}-->
+<!--                </foreach>-->
+<!--            </if>-->
+<!--            <if test="workOrderNo != null and workOrderNo != ''">-->
+<!--                and two.work_order_no like concat('%',#{workOrderNo},'%')-->
+<!--            </if>-->
+<!--            <if test="itemNo != null and itemNo != ''">-->
+<!--                and two.item_no = #{itemNo}-->
+<!--            </if>-->
+<!--            <if test="userId != null and userId != ''">-->
+<!--                and twrd.user_id = #{userId}-->
+<!--            </if>-->
+<!--            <if test="beginTime != null and beginTime != ''">-->
+<!--                and twrd.created_time &gt;= STR_TO_DATE(concat(#{beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d %H:%i:%s')-->
+<!--            </if>-->
+<!--            <if test="endTime != null and endTime != ''">-->
+<!--                and twrd.created_time &lt;= STR_TO_DATE(concat(#{endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d %H:%i:%s')-->
+<!--            </if>-->
+<!--        </where>-->
+<!--        order by twrd.created_time desc-->
+<!--    </select>-->
+
+    <!-- 查询所有（不分页，导出用）
+     导出工人报工工资明细（按条件查询并导出Excel） -->
+    <select id="detailPageListAll" resultType="cn.jb.boot.biz.work.dto.WorkerReportSalaryExportDTO">
+        select
+        twrd.user_id as userId,                              -- 工人ID
+        ui.nick_name as userName,                                 -- 工人姓名（左联用户表）
+        date(twrd.created_time) as createDate,               -- 报工日期
+        twrd.user_count as userCount,                        -- 加工件数
+        cast(twrd.user_count * two.hours_fixed as char) as wages, -- 工资 = 工时数 * 单价
+        two.hours_fixed as hoursFixed,                       -- 单价
+        two.procedure_name as procedureName,                 -- 工序名称
+        two.item_no as itemNo,                               -- 产品编码
+#         two.bom_no as bomNo,                                 -- 图纸号（如字段不同需调整）
+        twrd.created_time as createdTime,                    -- 报工时间（yyyy-MM-dd HH:mm:ss）
+        two.work_order_no as workOrderNo,                    -- 工单号
+        tod.order_no as orderNo                              -- 订单号
+        from t_worker_report_dtl twrd
+        inner join t_work_order two on twrd.work_order_id = two.id        -- 工单表
+        left join t_order_dtl tod on two.order_dtl_id = tod.id            -- 订单明细表
+        left join sys_user_info ui on twrd.user_id = ui.id                -- 用户表
+        <!-- 如 bomNo 字段不在 t_work_order，请根据实际业务 left join 物料/BOM 表，并取别名 -->
+        <where>
+            <if test="procedureNames != null and procedureNames.size() > 0 ">
+                and two.procedure_name in
+                <foreach collection="procedureNames" item="name" index="index" open="(" close=")" separator=",">
+                    #{name}
+                </foreach>
+            </if>
+            <if test="workOrderNo != null and workOrderNo != ''">
+                and two.work_order_no like concat('%',#{workOrderNo},'%')
+            </if>
+            <if test="itemNo != null and itemNo != ''">
+                and two.item_no = #{itemNo}
+            </if>
+            <if test="userId != null and userId != ''">
+                and twrd.user_id = #{userId}
+            </if>
+            <if test="beginTime != null and beginTime != ''">
+                and twrd.created_time &gt;= STR_TO_DATE(concat(#{beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test="endTime != null and endTime != ''">
+                and twrd.created_time &lt;= STR_TO_DATE(concat(#{endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d %H:%i:%s')
+            </if>
+        </where>
+        order by twrd.created_time desc
+    </select>
+
+
+
+
+
+    <!--    根据条件分页查询工人报工明细列表&ndash;&gt;-->
+<!--    <select id="pageInfo" resultType="cn.jb.boot.biz.work.vo.response.WorkerReportDtlPageResponse"-->
+<!--            parameterType="cn.jb.boot.biz.work.vo.request.WorkerReportDtlPageRequest">-->
+<!--        select two.item_no,-->
+<!--        sum(twrd.user_count) user_count,-->
+<!--        sum(twrd.user_count)* two.hours_fixed wages,-->
+<!--        two.procedure_name,-->
+<!--        two.hours_fixed,-->
+<!--        twrd.user_id,-->
+<!--        date(twrd.created_time) createDate-->
+<!--        from t_worker_report_dtl twrd-->
+<!--        inner join t_work_order two on twrd.work_order_id=two.id-->
+<!--        <where>-->
+<!--            <if test="p.procedureNames != null and p.procedureNames.size()>0 ">-->
+<!--                and two.procedure_name in-->
+<!--                <foreach collection="p.procedureNames" item="name" index="index" open="(" close=")" separator=",">-->
+<!--                    #{name}-->
+<!--                </foreach>-->
+<!--            </if>-->
+<!--            <if test="p.itemNo != null and p.itemNo != ''">-->
+<!--                and two.item_no =#{p.itemNo}-->
+<!--            </if>-->
+<!--            <if test="p.userId != null and p.userId != ''">-->
+<!--                and twrd.user_id =#{p.userId}-->
+<!--            </if>-->
+<!--            <if test="p.beginTime != null and p.beginTime != ''">-->
+<!--                and twrd.created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d-->
+<!--                %H:%i:%s')-->
+<!--            </if>-->
+<!--            <if test="p.endTime != null and p.endTime != ''">-->
+<!--                and twrd.created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d-->
+<!--                %H:%i:%s')-->
+<!--            </if>-->
+<!--        </where>-->
+<!--        group by two.item_no,two.procedure_name, two.hours_fixed, twrd.user_id,-->
+<!--        date(twrd.created_time)-->
+<!--        order by date(twrd.created_time) desc-->
+
+<!--    </select>-->
+
+
+    <!--    工人报工明细列表-->
+    <select id="pageInfo" resultType="cn.jb.boot.biz.work.vo.response.WorkerReportDtlPageResponse"
+            parameterType="cn.jb.boot.biz.work.vo.request.WorkerReportDtlPageRequest">
+        select
+        two.item_no,
+        sum(twrd.user_count) user_count,
+        sum(twrd.user_count)*two.hours_fixed wages,
+        two.procedure_name,
+        two.hours_fixed,
+        twrd.user_id,
+        date(twrd.created_time) createDate,
+        tod.order_no <!-- 新增：订单号 -->
+        from t_worker_report_dtl twrd
+        inner join t_work_order two on twrd.work_order_id=two.id
+        left join t_order_dtl tod on two.order_dtl_id=tod.id <!-- 新增：订单明细关联 -->
+        <where>
+            <if test="p.procedureNames != null and p.procedureNames.size()>0 ">
+                and two.procedure_name in
+                <foreach collection="p.procedureNames" item="name" index="index" open="(" close=")" separator=",">
+                    #{name}
+                </foreach>
+            </if>
+            <if test="p.itemNo != null and p.itemNo != ''">
+                and two.item_no =#{p.itemNo}
+            </if>
+            <if test="p.userId != null and p.userId != ''">
+                and twrd.user_id =#{p.userId}
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and twrd.created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and twrd.created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d %H:%i:%s')
+            </if>
+        </where>
+        group by
+        two.item_no,
+        two.procedure_name,
+        two.hours_fixed,
+        twrd.user_id,
+        date(twrd.created_time),
+        tod.order_no  <!-- 新增：保持分组字段一致 -->
+        order by date(twrd.created_time) desc
+    </select>
+
+
+
+
+
+    <!--    查询工资明细-->
+<!--    <select id="detailPageList" resultType="cn.jb.boot.biz.work.vo.response.WorkerReportDtlPageResponse">-->
+<!--        select two.item_no,-->
+<!--        twrd.user_count user_count,-->
+<!--        twrd.user_count* two.hours_fixed wages,-->
+<!--        two.procedure_name,-->
+<!--        two.hours_fixed,-->
+<!--        two.work_order_no,-->
+<!--        twrd.user_id,-->
+<!--        twrd.created_time-->
+<!--        from t_worker_report_dtl twrd-->
+<!--        inner join t_work_order two on twrd.work_order_id=two.id-->
+<!--        <where>-->
+<!--            <if test="p.procedureNames != null and p.procedureNames.size()>0 ">-->
+<!--                and two.procedure_name in-->
+<!--                <foreach collection="p.procedureNames" item="name" index="index" open="(" close=")" separator=",">-->
+<!--                    #{name}-->
+<!--                </foreach>-->
+<!--            </if>-->
+<!--            <if test="p.workOrderNo != null and p.workOrderNo != ''">-->
+<!--                and two.work_order_no like concat('%',#{p.workOrderNo},'%')-->
+<!--            </if>-->
+<!--            <if test="p.itemNo != null and p.itemNo != ''">-->
+<!--                and two.item_no =#{p.itemNo}-->
+<!--            </if>-->
+<!--            <if test="p.userId != null and p.userId != ''">-->
+<!--                and twrd.user_id =#{p.userId}-->
+<!--            </if>-->
+<!--            <if test="p.beginTime != null and p.beginTime != ''">-->
+<!--                and twrd.created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d-->
+<!--                %H:%i:%s')-->
+<!--            </if>-->
+<!--            <if test="p.endTime != null and p.endTime != ''">-->
+<!--                and twrd.created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d-->
+<!--                %H:%i:%s')-->
+<!--            </if>-->
+<!--        </where>-->
+<!--        order by twrd.created_time desc-->
+<!--    </select>-->
+<!--    -->
+
+    <!--    查询工资明细-->
+    <select id="detailPageList" resultType="cn.jb.boot.biz.work.vo.response.WorkerReportDtlPageResponse">
+        select
+        two.item_no,
+        twrd.user_count user_count,
+        twrd.user_count * two.hours_fixed wages,
+        two.procedure_name,
+        two.hours_fixed,
+        two.work_order_no,
+        twrd.user_id,
+        twrd.created_time,
+        tod.order_no  <!-- 新增：订单号 -->
+        from t_worker_report_dtl twrd
+        inner join t_work_order two on twrd.work_order_id = two.id
+        left join t_order_dtl tod on two.order_dtl_id = tod.id  <!-- 新增：订单明细关联 -->
+        <where>
+            <if test="p.procedureNames != null and p.procedureNames.size() > 0 ">
+                and two.procedure_name in
+                <foreach collection="p.procedureNames" item="name" index="index" open="(" close=")" separator=",">
+                    #{name}
+                </foreach>
+            </if>
+            <if test="p.workOrderNo != null and p.workOrderNo != ''">
+                and two.work_order_no like concat('%',#{p.workOrderNo},'%')
+            </if>
+            <if test="p.itemNo != null and p.itemNo != ''">
+                and two.item_no = #{p.itemNo}
+            </if>
+            <if test="p.userId != null and p.userId != ''">
+                and twrd.user_id = #{p.userId}
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and twrd.created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and twrd.created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d %H:%i:%s')
+            </if>
+        </where>
+        order by twrd.created_time desc
+    </select>
+
+
+</mapper>

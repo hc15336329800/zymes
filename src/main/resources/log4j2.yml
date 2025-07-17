@@ -1,0 +1,90 @@
+Configuration:
+  name: LogConfig
+  status: INFO
+  strict: true
+
+  Properties:
+    Property:
+      - name: filepath
+        value: "${sys:user.home}/jb_mes_v2_logs"
+      - name: pattern
+        value: "[mes][user][%d{yyyy-MM-dd HH:mm:ss SSS}][%-5p][%-30t][%-32c{1.} %-4L][user=%m]%n"
+
+  Appenders:
+
+
+    RollingRandomAccessFile:
+      - name: UserLog
+        fileName: ${filepath}/jb_mes_v2.log
+        filePattern: ${filepath}/bak/userLog-%d{yy-MM-dd}-%i.log.gz
+        PatternLayout:
+          pattern: ${pattern}
+
+        Policies:
+          TimeBasedTriggeringPolicy:
+            interval: 1
+            modulate: false
+          SizeBasedTriggeringPolicy:
+            size: 24MB
+        DefaultRolloverStrategy:
+          max: 100
+
+          Delete:
+            basePath: ${filepath}/bak/
+            maxDepth: 1
+            IfFileName:
+              glob: userLog-*.log.gz
+            IfLastModified:
+              - age: 31D
+                IfAny:
+                  IfAccumulatedFileSize:
+                    exceeds: 1 GB
+                  IfAccumulatedFileCount:
+                    exceeds: 1
+
+
+      - name: candyOauthLog
+        fileName: ${filepath}/jb_mes_v2_oauth.log
+        filePattern: ${filepath}/oauthBak/ydOauthLog-%d{yy-MM-dd}-%i.log.gz
+        PatternLayout:
+          pattern: ${pattern}
+
+        Policies:
+          TimeBasedTriggeringPolicy:
+            interval: 1
+            modulate: false
+          SizeBasedTriggeringPolicy:
+            size: 128MB
+        DefaultRolloverStrategy:
+          max: 100
+
+          Delete:
+            basePath: ${filepath}/oauthBak/
+            maxDepth: 1
+            IfFileName:
+              glob: candyOauthLog-*.log.gz
+            IfLastModified:
+              - age: 10D
+                IfAny:
+                  IfAccumulatedFileSize:
+                    exceeds: 1 GB
+                  IfAccumulatedFileCount:
+                    exceeds: 1
+
+  Loggers:
+    Root:
+      level: INFO
+
+    Logger:
+      - name: cn.jb
+        level: INFO
+        AppenderRef:
+          - ref: UserLog
+
+      - name: userLogin
+        level: DEBUG
+        additivity: false
+        AppenderRef:
+          - ref: UserLog
+          - ref: candyOauthLog
+          

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.item.mapper.WarehouseInfoMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, name, remark, updated_by, updated_time, created_by, created_time
+    </sql>
+
+    <select id="pageInfo" resultType="cn.jb.boot.biz.item.vo.response.WarehouseInfoPageResponse"
+            parameterType="cn.jb.boot.biz.item.vo.request.WarehouseInfoPageRequest">
+        select
+        <include refid="Base_Column_List"/>
+        from t_warehouse_info
+        <where>
+            <if test="p.name != null and p.name != ''">
+                and name like concat('%',#{p.name},'%')
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+        </where>
+        order by created_time desc
+    </select>
+    <select id="selected" resultType="cn.jb.boot.system.vo.DictDataVo">
+
+        select id, id dict_value, name dict_label,1 dictSort
+        from t_warehouse_info mis
+    </select>
+
+</mapper>

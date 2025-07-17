@@ -1,0 +1,68 @@
+#  application.yml
+spring:
+  application:
+    name: jb-mes
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 100MB
+
+  profiles:
+    active: 'dev'
+
+  jackson:
+    default-property-inclusion: NON_NULL
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+
+  main:
+    allow-circular-references: true
+
+server:
+  port: 6000
+
+logging:
+  config: classpath:log4j2.yml
+  level:
+      com.zaxxer.hikari: DEBUG
+      com.baomidou.dynamic: DEBUG
+      root: INFO
+
+#通过这个配置让 SQL 打印在控制台。
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+jbtcl:
+  local:
+    white-list:
+      api-black-list:
+        - /api/**
+
+      # 接口白名单
+      api-permit-all:
+        - /api/anon/**
+        - /api/user/**
+        - /api/system/**
+        - /api/work/dashboard/**
+        - /api/export/delivery/**
+        - /api/tabularAnalysis/parts-summary/**
+        - /api/agvcar/agv_info/getStation
+        - /api/tray/tray_info/getPdaData
+        - /api/agvcar/agv_info/getBomData
+        - /api/agvcar/agv_info/getTaskOfWeek
+        - /api/agvcar/agv_info/getKukaStatus
+        - /api/agvcar/agv_info/setKukaStatus
+        - /api/tray/tray_info/page_list
+        - /api/order/order_dtl/page_list
+        - /api/order/order_dtl/getProcTodayDatas
+        - /api/device/device_info/deviceType_count
+        - /api/test/**
+        - /api/salesOrder/**    #订单放行测试
+    ding-talk:
+      app-key: ding47bek4nvio0wbqpx
+      app-secret: a5_1eefxgKl2HhDLk8IBBZ5bvuGTPt-LsJEx3EbqRKNWNHYYAY7FcB6ID7OZfpc3
+      agent-id: 2326943690
+enable:
+  scheduling: true
+work_shop: 焊接车间,冲压车间,数控剪切车间,机修车间

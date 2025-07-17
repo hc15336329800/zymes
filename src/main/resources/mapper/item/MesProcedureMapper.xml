@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.item.mapper.MesProcedureMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, item_no, seq_no, procedure_code, procedure_name, hours_work, dept_id, device_id, hours_fixed, hours_prepare,
+        short_code, updated_by, updated_time, created_by, created_time
+    </sql>
+
+
+
+    <delete id="deleteByItemNos">
+        delete from mes_procedure
+        where item_no in
+        <foreach collection="list" item="itemNo" open="(" separator="," close=")">
+            #{itemNo}
+        </foreach>
+    </delete>
+
+
+
+    <select id="pageInfo" resultType="cn.jb.boot.biz.item.vo.response.MesProcedurePageResponse">
+        select mp.id, mp.item_no, mp.seq_no, mp.procedure_code, mp.procedure_name, mp.hours_work, mp.dept_id,
+        mp.device_id, mp.hours_fixed, mp.hours_prepare
+        ,tdi.device_name,tdi.device_no,mp.created_time
+        from mes_procedure mp left join t_device_info tdi
+        on mp.device_id =tdi.id
+
+        where mp.item_no=#{p.itemNo}
+        order by seq_no
+
+    </select>
+    <select id="headerInfo" resultType="cn.jb.boot.biz.item.vo.response.MesProcedureHeaderResponse">
+        select tbu.bom_no ,sum(mp.hours_work) totalHoursWork,sum(mp.hours_fixed) totalHoursFixed
+        from t_bom_used tbu inner join mes_procedure mp
+        on tbu.use_item_no =mp.item_no
+        where tbu.item_no =#{p.itemNo}
+        group by tbu.bom_no
+
+
+    </select>
+    <select id="selectNearItemNo" resultType="java.lang.String">
+        SELECT distinct item_no from mes_procedure mp
+        where updated_time>= #{startTime};
+    </select>
+    <select id="listNameByShortCode" resultType="cn.jb.boot.biz.item.vo.response.ProcListResp">
+        select distinct procedure_name from mes_procedure
+        <where>
+            <if test="p.shortCode !=null and p.shortCode !=''">
+                and short_code like concat('%',#{p.shortCode},'%')
+                or procedure_name like concat('%',#{p.shortCode},'%')
+            </if>
+        </where>
+    </select>
+    <select id="listProcedureByItem" resultType="cn.jb.boot.biz.item.vo.response.ItemProcedureResponse">
+        select id,procedure_code, procedure_name from mes_procedure
+        <where>
+            <if test="p.itemNo !=null and p.itemNo !=''">
+                and item_no =#{p.itemNo}
+            </if>
+            <if test="p.shortCode !=null and p.shortCode !=''">
+                and short_code like concat('%',#{p.shortCode},'%')
+                or procedure_name like concat('%',#{p.shortCode},'%')
+            </if>
+        </where>
+
+
+    </select>
+
+
+    <!-- 批量删除方法（匹配成对删除） -->
+    <delete id="deleteByItemNoAndProcedureCode">
+        DELETE FROM mes_procedure
+        WHERE (item_no, procedure_code) IN
+        <foreach collection="itemNos" item="itemNo" index="index"
+                 open="(" separator="," close=")">
+            (#{itemNo}, #{procedureCodes[${index}]})
+        </foreach>
+    </delete>
+
+</mapper>

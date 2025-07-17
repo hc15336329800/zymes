@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.agvcar.mapper.AgvManageInfoMapper">
+
+    <insert id="add">
+        INSERT INTO agvtask (agvname, beginCmd, begin, endCmd,
+        end)VALUES(#{agvName},#{beginCmd},#{begin},#{endCmd},#{end})
+    </insert>
+    <!-- 查询正在使用中的车辆 -->
+    <select id="usingCar" resultType="cn.jb.boot.biz.agvcar.vo.response.AgvManageInfoPageResponse"
+            parameterType="cn.jb.boot.biz.agvcar.vo.request.AgvManageInfoPageRequest">
+        select * from agvtask;
+    </select>
+    <!-- 查询起始命令字和结束命令字 -->
+    <select id="locationCmd" resultType="java.util.Map">
+        select * from task_locationinfocmd;
+    </select>
+    <!-- 查询起始点和结束点 -->
+    <select id="location" resultType="java.util.Map">
+        select * from task_locationinfo;
+    </select>
+    <!-- 查询一周内的任务量 -->
+    <select id="getTaskOfWeek" resultType="java.util.Map">
+        select count(*) as count,DATE(endtime) as time  from agvtaskhistory group by DATE(endtime) limit 7;
+    </select>
+</mapper>

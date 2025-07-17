@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.device.mapper.RepairOrderMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, name, device_id, report_time, repair_time, repair_uid, repair_result, check_time, check_uid, updated_by,
+        updated_time, created_by, created_time
+    </sql>
+
+    <select id="pageInfo" resultType="cn.jb.boot.biz.device.vo.response.RepairOrderPageResponse"
+            parameterType="cn.jb.boot.biz.device.vo.request.RepairOrderPageRequest">
+        select tro.id, tro.name, tro.device_id, tro.report_time, tro.repair_time, tro.repair_uid, tro.repair_result,
+        tro.check_time, tro.check_uid, tro.created_time
+        ,di.device_no,di.device_name
+        from t_repair_order tro inner join t_device_info di on tro.device_id=di.id
+        <where>
+            <if test="p.deviceId != null and p.deviceId != ''">
+                and tro.device_id =#{p.deviceId}
+            </if>
+            <if test="p.name != null and p.name != ''">
+                and tro.name like concat('%',#{p.name},'%')
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and tro.repair_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and tro.repair_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+        </where>
+        order by tro.created_time desc
+    </select>
+</mapper>

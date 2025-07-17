@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.work.mapper.WorkReportMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, work_order_id, real_count, deff_count, status,remark, qua_time, qua_user, verify_time, verify_user,
+        group_id,report_type, updated_by, updated_time, created_by, created_time
+    </sql>
+
+
+<!--    此处查询涉及到5张表：t_work_report、t_work_order、t_group_info、mes_item_stock、t_order_dtl-->
+    <select id="pageInfo" resultType="cn.jb.boot.biz.work.vo.response.WorkReportPageResponse"
+            parameterType="cn.jb.boot.biz.work.vo.request.WorkReportPageRequest">
+        select
+        twr.id,
+        twr.real_count,
+        twr.deff_count,
+        twr.status,
+        twr.remark,
+        twr.qua_time,
+        twr.qua_user,
+        twr.verify_time,
+        twr.verify_user,
+        twr.created_by,
+        twr.created_time,
+        two.work_order_no,
+        two.device_id,
+        two.dept_id,
+        two.procedure_name,
+        two.plan_total_count,
+        two.item_no as itemNo,         <!-- 物料编码 -->
+        gi.group_name,
+        report_type,
+        gi.group_uid,
+        twr.remark,
+        mis.item_name as itemName,     <!-- 物料名称 -->
+        tod.order_no as orderNo        <!-- 订单号 -->
+        from t_work_report twr
+        inner join t_work_order two on two.id = twr.work_order_id
+        inner join t_group_info gi on gi.id = twr.group_id
+        left join mes_item_stock mis on two.item_no = mis.item_no
+        left join t_order_dtl tod on two.order_dtl_id = tod.id
+        <where>
+            <if test="p.workOrderNo != null and p.workOrderNo != ''">
+                and two.work_order_no like concat('%',#{p.workOrderNo},'%')
+            </if>
+            <if test="p.status != null and p.status != ''">
+                and twr.status=#{p.status}
+            </if>
+            <if test="p.deviceId != null and p.deviceId != ''">
+                and two.device_id=#{p.deviceId}
+            </if>
+            <if test="p.deptId != null and p.deptId != ''">
+                and two.dept_id=#{p.deptId}
+            </if>
+            <if test="p.itemNo != null and p.itemNo != ''">
+                and two.item_no=#{p.itemNo}
+            </if>
+            <if test="p.procedureNames != null and p.procedureNames.size()>0 ">
+                and two.procedure_name in
+                <foreach collection="p.procedureNames" item="name" index="index" open="(" close=")" separator=",">
+                    #{name}
+                </foreach>
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and twr.created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and twr.created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d %H:%i:%s')
+            </if>
+        </where>
+        order by twr.created_time desc
+    </select>
+
+
+    <!--    <select id="pageInfo" resultType="cn.jb.boot.biz.work.vo.response.WorkReportPageResponse"-->
+<!--            parameterType="cn.jb.boot.biz.work.vo.request.WorkReportPageRequest">-->
+<!--        select-->
+<!--        twr.id,twr.real_count,twr.deff_count,twr.status,twr.remark,twr.qua_time,twr.qua_user,twr.verify_time,twr.verify_user,twr.created_by,twr.created_time,-->
+<!--        two.work_order_no,two.device_id,two.dept_id,two.procedure_name,two.plan_total_count,two.item_no,gi.group_name,report_type,gi.group_uid,twr.remark-->
+<!--        from t_work_report twr inner join t_work_order two on two.id=twr.work_order_id inner join t_group_info gi on-->
+<!--        gi.id=twr.group_id-->
+<!--        <where>-->
+<!--            <if test="p.workOrderNo != null and p.workOrderNo != ''">-->
+<!--                and two.work_order_no like concat('%',#{p.workOrderNo},'%')-->
+<!--            </if>-->
+<!--            <if test="p.status != null and p.status != ''">-->
+<!--                and twr.status=#{p.status}-->
+<!--            </if>-->
+
+<!--            <if test="p.deviceId != null and p.deviceId != ''">-->
+<!--                and two.device_id=#{p.deviceId}-->
+<!--            </if>-->
+<!--            <if test="p.deptId != null and p.deptId != ''">-->
+<!--                and two.dept_id=#{p.deptId}-->
+<!--            </if>-->
+<!--            <if test="p.itemNo != null and p.itemNo != ''">-->
+<!--                and two.item_no=#{p.itemNo}-->
+<!--            </if>-->
+<!--            <if test="p.procedureNames != null and p.procedureNames.size()>0 ">-->
+<!--                and two.procedure_name-->
+<!--                in-->
+<!--                <foreach collection="p.procedureNames" item="name" index="index" open="(" close=")" separator=",">-->
+<!--                    #{name}-->
+<!--                </foreach>-->
+<!--            </if>-->
+
+<!--            <if test="p.beginTime != null and p.beginTime != ''">-->
+<!--                and twr.created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d-->
+<!--                %H:%i:%s')-->
+<!--            </if>-->
+<!--            <if test="p.endTime != null and p.endTime != ''">-->
+<!--                and twr.created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d-->
+<!--                %H:%i:%s')-->
+<!--            </if>-->
+<!--        </where>-->
+<!--        order by twr.created_time desc-->
+<!--    </select>-->
+
+
+
+</mapper>

@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.item.mapper.MesItemStockMapper">
+
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, item_no, item_name, item_count, item_measure, item_origin, item_model, bom_no, item_type, location,
+        item_count_assist, item_measure_assist, uni_id, is_valid, erp_count, net_weight, updated_by, updated_time,
+        created_by, created_time
+    </sql>
+
+
+    <select id="pageInfo" resultType="cn.jb.boot.biz.item.vo.response.MesItemStockPageResponse">
+
+        select
+        <include refid="Base_Column_List"/>
+        from mes_item_stock
+        <where>
+            is_valid='01'
+            <if test="p.itemType != null and p.itemType != ''">
+                and item_type =#{p.itemType}
+            </if>
+            <if test="p.bomNo != null and p.bomNo != ''">
+                and bom_no =#{p.bomNo}
+            </if>
+            <if test="p.itemNo != null and p.itemNo != ''">
+                and item_no like concat('%', #{p.itemNo,jdbcType=VARCHAR}, '%')
+            </if>
+            <if test="p.itemName != null and p.itemName != ''">
+                and item_name like concat('%', #{p.itemName,jdbcType=VARCHAR}, '%')
+            </if>
+            <if test="p.location != null and p.location != ''">
+                and location = #{p.location,jdbcType=VARCHAR}
+            </if>
+            <if test="p.itemOrigin != null and p.itemOrigin != ''">
+                and item_origin = #{p.itemOrigin,jdbcType=VARCHAR}
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+        </where>
+        order by created_time desc
+    </select>
+
+
+
+    <select id="getByBomNos" resultType="cn.jb.boot.biz.item.entity.MesItemStock">
+        select
+        <include refid="Base_Column_List"/>
+        from mes_item_stock
+        <where>
+            <if test="boms !=null and boms.size()>0">
+                bom_no in
+                <foreach collection="boms" item="bomNo" index="index" open="(" close=")" separator=",">
+                    #{bomNo}
+                </foreach>
+            </if>
+        </where>
+    </select>
+    <select id="getByItemNos" resultType="cn.jb.boot.biz.item.entity.MesItemStock">
+        select
+        <include refid="Base_Column_List"/>
+        from mes_item_stock
+        <where>
+            <if test="itemNos !=null and itemNos.size()>0">
+                item_no in
+                <foreach collection="itemNos" item="itemNo" index="index" open="(" close=")" separator=",">
+                    #{itemNo}
+                </foreach>
+            </if>
+        </where>
+    </select>
+    <select id="getCache" resultType="cn.jb.boot.system.vo.DictDataVo">
+        select id, item_no dict_value, bom_no dict_label,1 dictSort, item_name name,item_type type
+        from mes_item_stock mis
+
+    </select>
+    <select id="itemNoSelected" resultType="cn.jb.boot.biz.item.vo.response.ItemSelectedResponse">
+        select item_no, item_name,bom_no from mes_item_stock
+        <where>
+            is_valid='01'
+            <if test="p.itemNo != null and p.itemNo != ''">
+                and item_No like concat('%',#{p.itemNo},'%')
+            </if>
+        </where>
+
+
+    </select>
+    <select id="listBomByNo" resultType="cn.jb.boot.biz.item.vo.response.ItemSelectedResponse">
+        select item_no, item_name,bom_no from mes_item_stock
+        <where>
+            is_valid='01' and item_type='01'
+            <if test="p.bomNo != null and p.bomNo != ''">
+                and bom_no like concat('%',#{p.bomNo},'%')
+            </if>
+        </where>
+
+
+    </select>
+
+    <!--    查重-->
+    <select id="bomPageList" resultType="cn.jb.boot.biz.item.vo.response.MesItemStockPageResponse">
+        select
+        mis.id, mis.item_no, mis.item_name, mis.item_count bomCount, mis.item_measure, mis.item_origin, mis.item_model,
+        mis.bom_no, mis.item_type,
+        mis.location, mis.item_count_assist, mis.item_measure_assist, mis.net_weight, mis.created_time,
+        ifnull( tmis.initial_count + tmis.report_count-tmis.report_used-tmis.out_store_used-tmis.alloc_used , 0)
+        itemCount
+        from mes_item_stock mis left join t_mid_item_stock tmis on mis.item_no=tmis.item_no and tmis.last_flag='01'
+        <where>
+            mis.is_valid='01' and mis.item_type='01'
+            <if test="p.bomNo != null and p.bomNo != ''">
+                and mis.bom_no like concat('%', #{p.bomNo,jdbcType=VARCHAR}, '%')
+            </if>
+            <if test="p.itemNo != null and p.itemNo != ''">
+                and mis.item_no like concat('%', #{p.itemNo,jdbcType=VARCHAR}, '%')
+            </if>
+            <if test="p.itemName != null and p.itemName != ''">
+                and mis.item_name like concat('%', #{p.itemName,jdbcType=VARCHAR}, '%')
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and mis.created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and mis.created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+        </where>
+        order by mis.created_time desc
+
+
+    </select>
+
+<!--    查重-->
+    <select id="bomPageList_源" resultType="cn.jb.boot.biz.item.vo.response.MesItemStockPageResponse">
+        select
+        mis.id, mis.item_no, mis.item_name, mis.item_count bomCount, mis.item_measure, mis.item_origin, mis.item_model,
+        mis.bom_no, mis.item_type,
+        mis.location, mis.item_count_assist, mis.item_measure_assist, mis.net_weight, mis.created_time,
+        ifnull( tmis.initial_count + tmis.report_count-tmis.report_used-tmis.out_store_used-tmis.alloc_used , 0)
+        itemCount
+        from mes_item_stock mis left join t_mid_item_stock tmis on mis.item_no=tmis.item_no and tmis.last_flag='01'
+        <where>
+            mis.is_valid='01' and mis.item_type='01'
+            <if test="p.bomNo != null and p.bomNo != ''">
+                and mis.bom_no like concat('%', #{p.bomNo,jdbcType=VARCHAR}, '%')
+            </if>
+            <if test="p.itemNo != null and p.itemNo != ''">
+                and mis.item_no like concat('%', #{p.itemNo,jdbcType=VARCHAR}, '%')
+            </if>
+            <if test="p.itemName != null and p.itemName != ''">
+                and mis.item_name like concat('%', #{p.itemName,jdbcType=VARCHAR}, '%')
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and mis.created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and mis.created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+        </where>
+        order by mis.created_time desc
+
+
+    </select>
+
+
+
+
+
+    <insert id="insertItemStock">
+        INSERT INTO mes_item_stock (id,item_no,item_name,item_count,item_measure,item_origin,item_model,bom_no,item_type,location,remark,item_count_assist,item_measure_assist,uni_id,is_valid,erp_count,net_weight,created_by,created_time,updated_by,updated_time)
+        VALUES(#{id},#{itemNo},#{itemName},#{itemCount},#{itemMeasure},#{itemOrigin},#{itemModel},#{bomNo},#{itemType},#{location},#{remark},#{itemCountAssist},#{itemMeasureAssist},#{uniId},#{isValid},#{erpCount},#{netWeight},#{createdBy},#{createdTime},#{updatedBy},#{updatedTime})
+    </insert>
+
+    <insert id="insertBomUsed">
+        INSERT INTO mes_item_use (id,item_no,use_item_no,use_item_count,use_item_measure,fixed_use,vari_use,fixed_use_assist,vari_use_assist,item_measure_assist,use_item_type,created_by,created_time,updated_by,updated_time)
+        VALUES(#{id},#{itemNo},#{useItemNo},#{useItemCount},#{useItemMeasure},#{fixedUse},#{variUse},#{fixedUseAssist},#{variUseAssist},#{itemMeasureAssist},#{useItemType},#{createdBy},#{createdTime},#{updatedBy},#{updatedTime})
+    </insert>
+
+    <insert id="insertMesProcedure">
+        INSERT INTO mes_procedure (id,item_no,seq_no,procedure_code,procedure_name,hours_work,dept_id,device_id,hours_fixed,hours_prepare,short_code,created_by,created_time,updated_by,updated_time)
+        VALUES(#{id},#{itemNo},#{seqNo},#{procedureCode},#{procedureName},#{hoursWork},#{deptId},#{deviceId},#{hoursFixed},#{hoursPrepare},#{shortCode},#{createdBy},#{createdTime},#{updatedBy},#{updatedTime})
+    </insert>
+
+    <delete id="deleteBomData">
+        DELETE FROM mes_item_stock;
+        DELETE FROM mes_item_use;
+        DELETE FROM mes_procedure;
+        DELETE FROM t_bom_used
+    </delete>
+
+    <select id="selectBoms" resultType="cn.jb.boot.biz.item.entity.MesItemStock">
+        SELECT id, item_no, bom_no
+        from mes_item_stock mis
+        where item_type in ('01')
+          and is_valid = '01'
+          and updated_time>=#{startTime}
+        order by id
+    </select>
+
+
+</mapper>

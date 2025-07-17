@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.order.mapper.ProcAllocationMapper">
+
+    <!-- 通用查询结果列 -->
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, order_dtl_id, order_no, item_no, procedure_code, procedure_name, total_count, outer_alloc_count,
+        worker_alloc_count, device_id, hours_fixed, proc_status, dept_id, prod_count, orgi_total_count, mid_count,
+        seq_no, outer_prod_count, outer_pub_count, updated_by, updated_time, created_by, created_time
+    </sql>
+
+<!--    查询部件的工序列表-->
+    <select id="pageInfo" resultType="cn.jb.boot.biz.order.vo.response.ProcAllocationPageResponse"
+            parameterType="cn.jb.boot.biz.order.vo.request.ProcAllocationPageRequest">
+        select<include refid="Base_Column_List"/>,
+        ifnull( total_count-ifnull(outer_alloc_count,0)-ifnull(worker_alloc_count,0),0) waitAllocCount
+
+        from t_proc_allocation
+        <where>
+            <if test="p.dtlIds !=null and p.dtlIds.size()>0 ">
+                and order_dtl_id in
+                <foreach collection="p.dtlIds" item="item" separator="," open="(" close=")">
+                    #{item}
+                </foreach>
+            </if>
+            <if test="p.deviceId != null and p.deviceId != ''">
+                and device_id =#{p.deviceId}
+            </if>
+            <if test="p.deptId != null and p.deptId != ''">
+                and dept_id =#{p.deptId}
+            </if>
+            <if test="p.procStatus != null and p.procStatus != ''">
+                and proc_status =#{p.procStatus}
+            </if>
+            <if test="p.procedureNames != null and p.procedureNames.size()>0 ">
+                and
+                procedure_name in
+                <foreach collection="p.procedureNames" item="name" index="index" open="(" close=")" separator=",">
+                    #{name}
+                </foreach>
+            </if>
+            <if test="p.allocStatus !=null and p.allocStatus !=''">
+                and
+                case when #{p.allocStatus} = '00' then total_count > worker_alloc_count
+                when #{p.allocStatus} = '01' then total_count &lt;=0 end
+            </if>
+
+
+        </where>
+        order by created_time desc
+    </select>
+    <resultMap id="distMap" type="cn.jb.boot.biz.order.vo.response.DistInfoResponse">
+        <result column="id" property="id"/>
+        <result property="procedureCode" column="procedure_code"/>
+        <result property="procedureName" column="procedure_name"/>
+        <result property="itemNo" column="item_no"/>
+        <result property="totalCount" column="total_count"/>
+        <result property="outerAllocCount" column="outer_alloc_count"/>
+        <result property="workerAllocCount" column="worker_alloc_count"/>
+        <result property="waitAllocCount" column="waitAllocCount"/>
+        <result property="orgiTotalCount" column="orgi_total_count"/>
+        <result property="midCount" column="mid_count"/>
+        <result property="prodCount" column="prod_count"/>
+        <result property="waitAllocCount" column="waitAllocCount"/>
+        <result property="workId" column="workOrderId"/>
+        <result property="workDeviceId" column="workDeviceId"/>
+        <result property="workItemCount" column="workItemCount"/>
+        <result property="workReportCount" column="workReportCount"/>
+    </resultMap>
+
+
+<!--    这个 SQL 查询主要用于获取 ​​工序分配信息（t_proc_allocation）​​ 及其关联的 ​​工单信息（t_work_order）​​，并计算待分配数量（waitAllocCount）。以下是详细解析：-->
+    <select id="distList" resultType="cn.jb.boot.biz.order.vo.response.DistInfoResponse">
+        select
+        tpa.id,
+        tpa.item_no,
+        tpa.procedure_code,
+        tpa.procedure_name,
+        tpa.total_count,
+        tpa.outer_alloc_count,
+        tpa.worker_alloc_count,
+        tpa.device_id,
+        tpa.prod_count,
+        tpa.orgi_total_count,
+        ifnull(tpa.total_count - ifnull(tpa.outer_alloc_count, 0) - ifnull(tpa.worker_alloc_count, 0), 0)
+        waitAllocCount,
+        tpa.mid_count,
+        tpa.outer_prod_count,
+        tpa.outer_pub_count,
+        two.work_order_no,
+        two.id workId,
+        two.device_id workDeviceId,
+        two.plan_total_count workItemCount,
+        two.real_count workReportCount
+        from
+        t_proc_allocation tpa
+        left join t_work_order two on
+        tpa.id = two.alloc_id and two.shift_type =#{p.shiftType} and two.data_status='00'
+        <where>
+            <if test="p.ids != null and p.ids.size()>0 ">
+                and tpa.id in
+                <foreach collection="p.ids" item="id" index="index" open="(" close=")" separator=",">
+                    #{id}
+                </foreach>
+            </if>
+
+        </where>
+    </select>
+    <select id="outerPubList" resultType="cn.jb.boot.biz.order.vo.response.OuterDistInfoResponse">
+
+        select<include refid="Base_Column_List"/>,
+        ifnull( ifnull(outer_alloc_count,0)-ifnull(outer_pub_count,0),0) waitPubCount
+
+        from t_proc_allocation
+
+        <where>
+            outer_alloc_count>0
+            <if test="p.status != null and p.status !='' ">
+                and
+                case when #{p.status} = '00' then outer_alloc_count > outer_pub_count
+                when #{p.status} = '01' then outer_alloc_count &lt;=outer_pub_count end
+            </if>
+            <if test="p.itemNo != null and p.itemNo !='' ">
+                and item_no=#{p.itemNo}
+            </if>
+            <if test="p.procedureNames != null and p.procedureNames.size()>0 ">
+                and
+                procedure_name in
+                <foreach collection="p.procedureNames" item="name" index="index" open="(" close=")" separator=",">
+                    #{name}
+                </foreach>
+            </if>
+        </where>
+
+
+    </select>
+
+</mapper>

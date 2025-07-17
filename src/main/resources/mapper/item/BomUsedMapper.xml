@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.item.mapper.BomUsedMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, item_no, use_item_no,parent_code,used_id, use_item_count,fixed_used, use_item_type, item_nos, bom_no,
+        updated_by, updated_time, created_by, created_time
+    </sql>
+
+
+    <!-- 递归 CTE + 路径防环，拉整棵树并一次性获取名称 -->
+    <select id="treeAll" resultType="cn.jb.boot.biz.item.dto.UseItemTreeRow">
+        WITH RECURSIVE bom_tree AS (
+        -- 根节点：直接子项，排除自环
+        SELECT
+        bu.item_no            AS itemNo,
+        bu.use_item_no        AS useItemNo,
+        bu.parent_code        AS parentCode,
+        bu.used_id            AS usedId,
+        bu.fixed_used         AS fixedUsed,
+        bu.bom_no             AS bomNo,
+        bu.use_item_type      AS itemType,
+        bu.use_item_no        AS path
+        FROM t_bom_used bu
+        WHERE bu.item_no = #{itemNo}
+        AND bu.use_item_no != bu.item_no
+
+        UNION ALL
+
+        -- 迭代下级：只要没出现在 path 里的新节点
+        SELECT
+        b2.item_no,
+        b2.use_item_no,
+        b2.parent_code,
+        b2.used_id,
+        b2.fixed_used,
+        b2.bom_no,
+        b2.use_item_type,
+        CONCAT(bt.path, ',', b2.use_item_no)
+        FROM t_bom_used b2
+        JOIN bom_tree bt
+        ON b2.item_no = bt.useItemNo
+        WHERE b2.use_item_no != b2.item_no
+        AND FIND_IN_SET(b2.use_item_no, bt.path) = 0
+        )
+        SELECT
+        bt.itemNo,
+        bt.useItemNo,
+        bt.parentCode,
+        bt.usedId,
+        bt.fixedUsed,
+        bt.bomNo,
+        bt.itemType,
+        mis.item_name AS itemName
+        FROM bom_tree bt
+        LEFT JOIN mes_item_stock mis
+        ON mis.item_no = bt.useItemNo
+        ORDER BY bt.parentCode, bt.useItemNo
+    </select>
+
+
+<!--    &lt;!&ndash; 树递归 V1：CTE，拉取整棵树并一次性 JOIN 名称     一次查询 + 内存组装 &ndash;&gt;-->
+<!--    <select id="treeAll" resultType="cn.jb.boot.biz.item.dto.UseItemTreeRow">-->
+<!--        WITH RECURSIVE bom_tree AS (-->
+<!--            &#45;&#45; 根节点：取到第一层子项-->
+<!--            SELECT-->
+<!--                bu.item_no            AS itemNo,-->
+<!--                bu.use_item_no        AS useItemNo,-->
+<!--                bu.parent_code        AS parentCode,-->
+<!--                bu.used_id            AS usedId,-->
+<!--                bu.fixed_used         AS fixedUsed,-->
+<!--                bu.bom_no             AS bomNo,-->
+<!--                bu.use_item_type      AS itemType-->
+<!--            FROM t_bom_used bu-->
+<!--            WHERE bu.item_no = #{itemNo}-->
+
+<!--            UNION ALL-->
+
+<!--            &#45;&#45; 迭代：取下一级子项-->
+<!--            SELECT-->
+<!--                b2.item_no,-->
+<!--                b2.use_item_no,-->
+<!--                b2.parent_code,-->
+<!--                b2.used_id,-->
+<!--                b2.fixed_used,-->
+<!--                b2.bom_no,-->
+<!--                b2.use_item_type-->
+<!--            FROM t_bom_used b2-->
+<!--                     JOIN bom_tree bt-->
+<!--                          ON b2.item_no = bt.useItemNo-->
+<!--        )-->
+<!--        SELECT-->
+<!--            bt.itemNo,-->
+<!--            bt.useItemNo,-->
+<!--            bt.parentCode,-->
+<!--            bt.usedId,-->
+<!--            bt.fixedUsed,-->
+<!--            bt.bomNo,-->
+<!--            bt.itemType,-->
+<!--            mis.item_name        AS itemName-->
+<!--        FROM bom_tree bt-->
+<!--                 LEFT JOIN mes_item_stock mis-->
+<!--                           ON mis.item_no = bt.useItemNo-->
+<!--        ORDER BY bt.parentCode, bt.useItemNo-->
+<!--    </select>-->
+
+
+
+
+    <select id="selectByItemNo" resultType="cn.jb.boot.biz.item.entity.BomUsed">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM t_bom_used
+        WHERE item_no IN
+        <foreach collection="itemNos" item="itemNo" open="(" separator="," close=")">
+            #{itemNo}
+        </foreach>
+    </select>
+
+
+</mapper>

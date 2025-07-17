@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.sales.mapper.SaleOrderPlaceMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, order_no, sale_id, item_no, deliver_Time, biz_Type, ordered_Num, apply_no, apply_name, apply_time,
+        place_status, approval_msg, updated_by, updated_time, created_by, created_time
+    </sql>
+
+    <select id="placeCheckedInfo" resultType="cn.jb.boot.biz.sales.model.PlaceCheck" parameterType="java.util.List">
+        select o.id, o.item_no, o.order_no, o.need_num,IFNULL( ps.ordered_Num,0) ordered_Num
+        from t_sale_order o
+        left join (select sum(IFNULL((ordered_Num), 0)) ordered_Num, sale_id from t_sale_order_place where place_status
+        &lt;&gt; '02' GROUP BY sale_id) ps
+        on ps.sale_id = o.id
+        where o.id in
+        <foreach collection="list" item="id" index="index" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="pageList" resultType="cn.jb.boot.biz.sales.vo.response.PlaceOrderPageRep"
+            parameterType="cn.jb.boot.biz.sales.vo.request.PlaceOrderPageReq">
+        select o.id, so.item_no, o.order_no, o.ordered_Num, o.biz_Type, o.approval_msg, o.apply_name, o.deliver_Time,
+        o.apply_time,
+        o.place_status,so.procedure_name, approval_msg
+        from t_sale_order_place o inner join t_sale_order so on so.id=o.sale_id
+        <where>
+            <if test='p.placeStatus != null and p.placeStatus !=""'>
+                AND o.place_status =#{p.placeStatus}
+            </if>
+            <if test="dto.orderNo != null and dto.orderNo != ''">
+                AND p.order_no LIKE CONCAT('%', #{dto.orderNo}, '%')
+            </if>
+
+            <if test='p.itemNos != null and p.itemNos.size()>0 '>
+                and o.item_no in
+                <foreach collection="p.itemNos" item="itemNo" index="index" open="(" close=")" separator=",">
+                    #{itemNo}
+                </foreach>
+            </if>
+            <if test='p.bizType != null and p.bizType !=""'>
+                AND o.biz_Type = #{p.bizType}
+            </if>
+            <if test='p.applyUser != null and p.applyUser !=""'>
+                AND o.apply_name like concat("%",#{p.applyUser},"%")
+            </if>
+            <if test='p.applyStartDate != null and p.applyStartDate !=""'>
+                and o.apply_time &gt;= STR_TO_DATE(concat(#{p.applyStartDate}, ' 00:00:00'),'%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test='p.applyEndDate != null and p.applyEndDate !=""'>
+                and o.apply_time &lt;= STR_TO_DATE(concat(#{p.applyEndDate}, ' 23:59:59'),'%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test='p.deliverStartDate != null and p.deliverStartDate !=""'>
+                and o.deliver_Time &gt;= STR_TO_DATE(concat(#{p.deliverStartDate}, ' 00:00:00'),'%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test='p.deliverEndDate != null and p.deliverEndDate !=""'>
+                and o.deliver_Time &lt;= STR_TO_DATE(concat(#{p.deliverEndDate}, ' 23:59:59'),'%Y-%m-%d %H:%i:%s')
+            </if>
+        </where>
+        order by o.updated_time desc
+    </select>
+    <select id="listDetails" resultType="cn.jb.boot.biz.sales.vo.response.PlaceOrderPageRep">
+        select o.id, so.item_no, o.order_no, o.ordered_Num, o.biz_Type, o.approval_msg, o.apply_name, o.deliver_Time,
+        o.apply_time,
+        o.place_status,so.procedure_name,so.need_num,so.cust_name
+        from t_sale_order_place o inner join t_sale_order so on so.id=o.sale_id
+        where so.id
+        in
+        <foreach collection="p.ids" item="id" index="index" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+
+
+    </select>
+
+
+
+
+<!--    查询销售单+审批单 （ 分页）-->
+    <select id="selectPlacePage" resultType="cn.jb.boot.biz.order.dto.SaleOrderFullInfoResp">
+        SELECT
+            p.id,
+        p.order_no,
+        p.apply_no,
+        p.apply_name,
+        p.apply_time,
+        p.place_status,
+        p.approval_msg,
+        p.biz_type,
+        s.cust_name,
+        s.item_no,
+        s.need_num,
+        s.order_status,
+        s.procedure_name,
+        i.item_name
+        FROM (
+        SELECT *,
+        ROW_NUMBER() OVER (PARTITION BY order_no ORDER BY created_time DESC) AS rn
+        FROM t_sale_order_place
+        <where>
+            <if test="dto.orderNo != null and dto.orderNo != ''">
+                AND order_no LIKE CONCAT('%', #{dto.orderNo}, '%')
+            </if>
+            <if test="dto.bizType != null and dto.bizType != ''">
+                AND biz_type = #{dto.bizType}
+            </if>
+            <if test="dto.placeStatus != null and dto.placeStatus != ''">
+                AND place_status = #{dto.placeStatus}
+            </if>
+            <if test="dto.applyStartDate != null and dto.applyStartDate != ''">
+                AND DATE(created_time) &gt;= #{dto.applyStartDate}
+            </if>
+            <if test="dto.applyEndDate != null and dto.applyEndDate != ''">
+                AND DATE(created_time) &lt;= #{dto.applyEndDate}
+            </if>
+        </where>
+        ) p
+        JOIN t_sale_order s ON p.sale_id = s.id
+        LEFT JOIN mes_item_stock i ON s.item_no = i.item_no
+        WHERE p.rn = 1
+        ORDER BY p.created_time DESC
+    </select>
+
+
+
+</mapper>

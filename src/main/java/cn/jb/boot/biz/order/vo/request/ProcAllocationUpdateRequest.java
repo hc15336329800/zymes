@@ -1,0 +1,37 @@
+package cn.jb.boot.biz.order.vo.request;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.List;
+
+/**
+ * 工序分配表表 修改请求参数
+ *
+ * @author lxl
+ * @Description
+ * @Copyright Copyright (c) 2024
+ * @since 2024-01-05 19:00:38
+ */
+@Data
+@Schema(name = "ProcAllocationUpdateRequest", description = "工序分配表 修改请求参数")
+public class ProcAllocationUpdateRequest implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+    /**
+     * 主键
+     */
+    @Schema(description = "主键")
+    @NotNull(message = "id不能为空")
+    private List<String> ids;
+
+
+    @NotBlank(message = "状态")
+    private String status;
+
+
+}

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.item.mapper.MesItemUseMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, item_no, use_item_no, use_item_count, use_item_measure, fixed_use, vari_use, fixed_use_assist,
+        vari_use_assist, item_measure_assist, use_item_type, updated_by, updated_time, created_by, created_time
+    </sql>
+
+
+
+
+    <select id="selectUses" resultType="cn.jb.boot.biz.item.entity.MesItemStock">
+        select mis.item_name,
+        mis.item_no,
+        mis.item_measure,
+        mis.item_model,
+        mis.item_count_assist,
+        mis.item_measure_assist,
+        mis.bom_no
+        from mes_item_stock mis
+        inner join
+        mes_item_use miu
+        on mis.item_no = miu.item_no
+        where miu.use_item_no = #{itemNo}
+
+
+    </select>
+
+
+</mapper>

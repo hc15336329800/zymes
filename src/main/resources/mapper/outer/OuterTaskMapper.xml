@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.outer.mapper.OuterTaskMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, user_id, alloc_id, outer_count, wait_real_count, real_count, wait_deff_count, deff_count, accept_status,
+        updated_by, updated_time, created_by, created_time
+    </sql>
+    <select id="pageInfo" resultType="cn.jb.boot.biz.outer.vo.response.OuterTaskPageResponse"
+            parameterType="cn.jb.boot.biz.outer.vo.request.OuterTaskPageRequest">
+        select
+        tot.id,tot.user_id,tot.outer_count,tot.wait_real_count,tot.real_count,tot.wait_deff_count,tot.deff_count,tot.created_time,tpa.item_no,tpa.procedure_name,tot.accept_status
+        from t_outer_task tot inner join t_proc_allocation tpa on tot.alloc_id=tpa.id
+        <where>
+            <if test="p.userId != null and p.userId != ''">
+                and tot.user_id=#{p.userId}
+            </if>
+            <if test="p.itemNo != null and p.itemNo != ''">
+                and tpa.itemNo=#{p.itemNo}
+            </if>
+            <if test="p.procedureNames != null and p.procedureNames.size()>0 ">
+                and
+                procedure_name in
+                <foreach collection="p.procedureNames" item="name" index="index" open="(" close=")" separator=",">
+                    #{name}
+                </foreach>
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and tot.created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and tot.created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+        </where>
+        order by tot.created_time desc
+    </select>
+</mapper>

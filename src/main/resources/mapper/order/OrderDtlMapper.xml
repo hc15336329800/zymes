@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.order.mapper.OrderDtlMapper">
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, order_no, item_no, item_count, production_count, order_dtl_status, need_mid_count, updated_by, updated_time,
+        created_by, created_time
+    </sql>
+
+
+<!--新增  查询t_order_dtl明细   -->
+    <select id="selectDtlWithItemPage原始" resultType="cn.jb.boot.biz.order.vo.response.OrderDtlPageResponse">
+        SELECT
+        od.id,
+        od.order_no,
+        od.item_no,
+        od.item_count,
+        od.production_count,
+        od.order_dtl_status,
+        od.need_mid_count,
+        od.updated_by,
+        od.updated_time,
+        od.created_by,
+        od.created_time,
+        mis.item_name
+        FROM
+        t_order_dtl od
+        LEFT JOIN
+        mes_item_stock mis ON od.item_no = mis.item_no
+        <where>
+            <if test="p.orderNo != null and p.orderNo != ''">
+                AND od.order_no LIKE CONCAT('%', #{p.orderNo}, '%')
+            </if>
+            <if test="p.orderDtlStatus != null and p.orderDtlStatus != ''">
+                AND od.order_dtl_status = #{p.orderDtlStatus}
+            </if>
+        </where>
+        ORDER BY od.created_time DESC
+    </select>
+
+
+    <!-- 查询 t_order_dtl 明细 + 顶层 BOM_NO -->
+    <select id="selectDtlWithItemPage"
+            resultType="cn.jb.boot.biz.order.vo.response.OrderDtlPageResponse">
+        SELECT
+        od.id,
+        od.order_no,
+        od.item_no,
+        od.item_count,
+        od.production_count,
+        od.order_dtl_status,
+        od.need_mid_count,
+        od.updated_by,
+        od.updated_time,
+        od.created_by,
+        od.created_time,
+        mis.item_name,
+        -- 左连接生产单，拿到生产单里的 item_no（顶层物料）
+        po.item_no          AS production_item_no,
+        -- 再左连接 mes_item_stock，拿到顶层物料的 bom_no
+        topMis.bom_no       AS top_bom_no
+        FROM t_order_dtl od
+        LEFT JOIN mes_item_stock mis
+        ON od.item_no = mis.item_no
+        LEFT JOIN t_production_order po
+        ON po.sales_order_no = od.order_no
+        LEFT JOIN mes_item_stock topMis
+        ON topMis.item_no = po.item_no
+        <where>
+            <if test="p.orderNo != null and p.orderNo != ''">
+                AND od.order_no LIKE CONCAT('%', #{p.orderNo}, '%')
+            </if>
+            <if test="p.orderDtlStatus != null and p.orderDtlStatus != ''">
+                AND od.order_dtl_status = #{p.orderDtlStatus}
+            </if>
+            <!-- 新增：物料名称模糊查询 -->
+            <if test="p.itemName != null and p.itemName != ''">
+                AND mis.item_name LIKE CONCAT('%', #{p.itemName, jdbcType=VARCHAR}, '%')
+            </if>
+        </where>
+        ORDER BY od.created_time DESC
+    </select>
+
+
+
+
+
+    <!--    -&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&# 查询t_order_dtl明细   订单分组45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;-->
+
+
+    <!-- ① 统计不同 order_no 数量 -->
+    <select id="countGroupByOrderNo" resultType="long"
+            parameterType="cn.jb.boot.biz.order.vo.request.OrderDtlPageRequest">
+        SELECT COUNT(DISTINCT d.order_no)
+        FROM t_order_dtl d
+        <where>
+            <!-- ★ 你的筛选条件保持不变 ★ -->
+        </where>
+    </select>
+
+    <!-- ② 取当页需要的 order_no 列表 -->
+    <select id="selectPageOrderNos" resultType="string" parameterType="map">
+        SELECT d.order_no
+        FROM t_order_dtl d
+        <where>
+            <if test="dto.orderStatus != null and dto.orderStatus != ''">
+                AND d.order_dtl_status = #{dto.orderStatus}
+            </if>
+            <!-- 其他 where 同上 -->
+        </where>
+        GROUP BY d.order_no
+        ORDER BY MAX(d.created_time) DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- ③ 一次性把整组明细查回来 -->
+    <select id="selectDetailsByOrderNos"
+            resultType="cn.jb.boot.biz.order.vo.response.OrderDtlPageResponse"
+            parameterType="java.util.List">
+        SELECT
+        d.id,
+        d.order_no,
+        d.item_no       AS itemNo,
+        d.item_count    AS itemCount,
+        d.production_count AS productionCount,
+        d.order_dtl_status AS orderDtlStatus,
+        d.created_time,
+        d.updated_time
+        FROM t_order_dtl d
+        WHERE d.order_no IN
+        <foreach collection="orderNos" item="ono" open="(" close=")" separator=",">
+            #{ono}
+        </foreach>
+        ORDER BY d.order_no,
+        d.created_time DESC
+    </select>
+
+
+
+    <!-- 新增：   使用树代替组  可行 -->
+    <select id="selectDtlWithItemAndTopBomByOrderNos"
+            resultType="cn.jb.boot.biz.order.vo.response.OrderDtlPageResponse"
+            parameterType="java.util.List">
+        SELECT
+        d.id,
+        d.order_no                AS orderNo,
+        d.item_no                 AS itemNo,
+        d.item_count              AS itemCount,
+        d.production_count        AS productionCount,
+        d.order_dtl_status        AS orderDtlStatus,
+        d.need_mid_count          AS needMidCount,
+        d.created_time            AS createdTime,
+        d.updated_time            AS updatedTime,
+        mis.bom_no AS bomNo,
+        mis.item_name             AS itemName,   <!-- 新加：物料名称 -->
+        topMis.bom_no             AS topBomNo    <!-- 新加：顶层 BOM -->
+        FROM t_order_dtl d
+        LEFT JOIN mes_item_stock mis
+        ON d.item_no = mis.item_no
+        LEFT JOIN t_production_order po
+        ON po.sales_order_no = d.order_no
+        LEFT JOIN mes_item_stock topMis
+        ON topMis.item_no = po.item_no
+        WHERE d.order_no IN
+        <foreach collection="orderNos" item="ono" open="(" separator="," close=")">
+            #{ono}
+        </foreach>
+        <if test="dto.orderDtlStatus != null and dto.orderDtlStatus != ''">
+            AND d.order_dtl_status = #{dto.orderDtlStatus}
+        </if>
+        <if test="dto.orderNo != null and dto.orderNo != ''">
+            AND d.order_no LIKE concat('%', #{dto.orderNo}, '%')
+        </if>
+        <if test="dto.itemName != null and dto.itemName != ''">
+            AND mis.item_name LIKE concat('%', #{dto.itemName}, '%')
+        </if>
+        ORDER BY d.order_no, d.created_time DESC
+    </select>
+
+
+
+
+    <!--    -&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;-->
+
+    <select id="pageInfo" resultType="cn.jb.boot.biz.order.vo.response.OrderDtlPageResponse"
+            parameterType="cn.jb.boot.biz.order.vo.request.OrderDtlPageRequest">
+        select
+        <include refid="Base_Column_List"/>
+        from t_order_dtl
+        <where>
+            <if test="p.childItemNos != null and p.childItemNos.size()>0 != ''">
+                item_no in
+                <foreach collection="p.childItemNos" item="itemNo" index="index" open="(" close=")" separator=",">
+                    #{itemNo}
+                </foreach>
+            </if>
+            <if test="p.orderStatus != null and p.orderStatus!= ''">
+                and order_dtl_status =#{p.orderStatus}
+            </if>
+            <if test="p.beginTime != null and p.beginTime != ''">
+                and created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+            <if test="p.endTime != null and p.endTime != ''">
+                and created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d
+                %H:%i:%s')
+            </if>
+        </where>
+        order by created_time desc
+    </select>
+    <select id="selectCurrentMonth" resultType="cn.jb.boot.biz.order.entity.OrderDtl">
+        select
+        <include refid="Base_Column_List"/>
+        from t_order_dtl
+        <where>
+            DATE_FORMAT(created_time,'%Y-%m')=DATE_FORMAT(now(),'%Y-%m')
+            and order_dtl_status &lt;&gt; '06'
+            <if test="itemNos !=null and itemNos.size()>0">
+                and item_no in
+                <foreach collection="itemNos" item="itemNo" close=")" open="(" separator=",">
+                    #{itemNo}
+                </foreach>
+            </if>
+
+        </where>
+
+
+    </select>
+    <select id="maxOrderNo" resultType="java.lang.Long">
+        SELECT max(cast(REPLACE(w.order_no, 'DD-', '') as UNSIGNED INTEGER)) as order_no
+        from t_order_dtl w
+    </select>
+
+    <select id="getProcTodayDatas" resultType="java.util.Map">
+        SELECT
+	       DATE_FORMAT( updated_time, '%Y-%m-%d %H:%i' ) AS updatedTime,
+	       sum( production_count ) AS productionCount
+        FROM
+	      t_order_dtl
+        WHERE
+	      updated_time LIKE concat(#{date},'%')
+        GROUP BY
+	     DATE_FORMAT(updated_time,'%Y-%m-%d %H:%i')
+	    ORDER BY updatedTime
+    </select>
+</mapper>

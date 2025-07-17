@@ -1,0 +1,49 @@
+#  application-dev.yml    --- 注意生产环境也是这个文件,  这里有问题 使用了这个文件和prod文件!!!!!!  部署要注意
+
+
+# 关于orc数据库  无法启动：
+# - @127.0.0.1:1521:orcl	SID 模式	用于老版 Oracle，连接 SID
+# - @//127.0.0.1:1521/XEPDB1	服务名模式	推荐写法，适配 Oracle 12c/18c/19c PDB
+
+spring:
+  datasource:
+    dynamic:
+      primary: db5 #设置默认数据源
+      strict: false #未匹配到数据源时使用默认数据源
+      datasource:
+
+#        db5:
+#          driver-class-name: com.mysql.cj.jdbc.Driver
+#          url: jdbc:mysql://localhost:3306/mes?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
+#          username: root
+#          password: root123456
+#
+#        db3:
+#          driver-class-name: oracle.jdbc.driver.OracleDriver
+#          url: jdbc:oracle:thin:@//127.0.0.1:1521/XEPDB1  # 注意双// 启动不了尝试去掉试试
+#          username: jsp
+#          password: root123456
+
+#         叉车和读取erp数据库
+#        db2:
+#            driver-class-name: com.mysql.cj.jdbc.Driver
+#            url: jdbc:mysql://182.192.0.9:3306/ego?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
+#            username: ego
+#            password: egorobotics
+
+
+        db3:
+            driver-class-name: oracle.jdbc.driver.OracleDriver
+            url: jdbc:oracle:thin:@127.0.0.1:1521:orcl
+            username: system
+            password: sys
+
+        # 生产环境配置
+        db5:
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://127.0.0.1:3306/mes?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
+          username: root
+          password: "root@zhongyu"
+
+server:
+  port: 6000

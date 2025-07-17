@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.jb.boot.biz.agvcar.mapper.BomManageInfoMapper">
+
+    <!--    回写物料同步状态-->
+    <update id="materUpdate原始" parameterType="java.lang.String">
+        UPDATE  JSP.JSPMATERIAL SET BYTSTATUS = 1 WHERE 1=1
+        <if test="itemNoList != null and !itemNoList.isEmpty()">
+            AND STRITEMCODE IN
+            <foreach item="itemNo" collection="itemNoList" open="(" separator="," close=")">
+                #{itemNo}
+            </foreach>
+        </if>
+    </update>
+
+<!--    回写物料同步状态-->
+    <update id="materUpdate" parameterType="java.util.List">
+        UPDATE JSPMATERIAL
+        SET BYTSTATUS = 1
+        WHERE STRITEMCODE IN
+        <foreach collection="list" item="itemNo" open="(" separator="," close=")">
+            #{itemNo}
+        </foreach>
+    </update>
+
+
+    <update id="bomUpdate" parameterType="java.lang.Integer">
+        UPDATE  JSP.JSPBOM SET BYTSTATUS = 1 WHERE 1=1
+        <if test="idList != null and !idList.isEmpty()">
+            AND LNGBOMID IN
+            <foreach item="id" collection="idList" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+        </if>
+    </update>
+
+    <update id="routerUpdate" parameterType="java.lang.Integer">
+        UPDATE  JSP.JSPBOMROUTER SET BYTSTATUS = 1 WHERE 1=1
+        <if test="routerIdList != null and !routerIdList.isEmpty()">
+            AND LNGBOMID IN
+            <foreach item="id" collection="routerIdList" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+        </if>
+    </update>
+
+
+
+    <!-- 查询物料 -->
+    <select id="materialMessage原始" resultType="java.util.Map"
+            parameterType="java.util.Map">
+        select * from DBSNMP.JSPMATERIAL
+    </select>
+
+    <!-- 查询物料 -->
+    <select id="materialMessage" resultType="java.util.Map">
+        SELECT * FROM JSPMATERIAL WHERE BYTSTATUS1 = 0
+    </select>
+
+
+
+    <select id="receiptMessage" resultType="java.util.Map"
+            parameterType="java.util.Map">
+        select * from DBSNMP.JSPRECEIPT
+    </select>
+    <select id="bomMessage" resultType="java.util.Map"
+            parameterType="java.util.Map">
+        select * from DBSNMP.JSPBOM
+    </select>
+    <select id="bomRouter" resultType="java.util.Map"
+            parameterType="java.util.Map">
+        select * from DBSNMP.JSPBOMROUTER
+    </select>
+</mapper>
