@@ -1,7 +1,6 @@
 package cn.jb.boot.biz.item.task;
 
 import cn.jb.boot.biz.agvcar.service.AgvManageInfoService;
-import cn.jb.boot.biz.item.service.MesItemStockService;
 import cn.jb.boot.biz.item.service.impl.MesToErpDataService;
 import cn.jb.boot.util.DateUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -14,10 +13,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
-
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
- *   ERP基础数据跨库同步  oracle数据库    V1.1
+ * ERP基础数据跨库同步  oracle数据库    V1.1
  */
 @Component
 @Slf4j
@@ -36,17 +36,21 @@ public class GetErpDataJob {
 
 
 
-
 	//===========================自动定时全同步==================================
 
 	/**
 	 *   整体自动同步方法
 	 */
-	@Scheduled(cron = "0 0/20 * * * ?")
+	//===========================自动定时全同步==================================
+
+	/**
+	 * 整体ERP同步方法
+	 */
+	@Scheduled(cron = "0 0/3 * * * ?")
 	public void syncErpToMesAll() {
 		if (running) {
-			log.warn("======【同步任务正在执行，跳过本次调度】======");
-			System.out.println("======【同步任务正在执行，跳过本次调度】======");
+			log.warn("======【ERP同步任务正在执行，跳过本次调度】======");
+			System.out.println("======【ERP同步任务正在执行，跳过本次调度】======");
 			return;
 		}
 
@@ -54,54 +58,57 @@ public class GetErpDataJob {
 		long totalStart = System.currentTimeMillis();
 		String totalStartStr = DateUtil.formatDateTime(LocalDateTime.now());
 
-		log.info("======【同步任务开始】{}======", totalStartStr);
-		System.out.println(String.format("======【同步任务开始】%s======", totalStartStr));
+		log.info("======【ERP同步任务开始】{}======", totalStartStr);
+		System.out.println(String.format("======【ERP同步任务开始】%s======", totalStartStr));
 
 		try {
 			List<Task> tasks = Arrays.asList(
 					new Task("ERP 物料", mesToErpDataService::syncItemStock),
 					new Task("ERP 工序", mesToErpDataService::syncProcedure),
-					new Task("ERP BOM依赖", mesToErpDataService::syncBomTree),
-					new Task("MES BOM依赖", () -> {
-						getMesDataJob.bom();
-						return 0;
-					}),
-					new Task("MES 工序", () -> {
-						getMesDataJob.process();
-						return 0;
-					})
+					new Task("ERP BOM依赖", mesToErpDataService::syncBomTree)
+//					new Task("MES BOM依赖", () -> {
+//						getMesDataJob.bom();
+//						return 0;
+//					}),
+
+
+					//这个工序  按时时间  需要调整
+//					new Task("MES 工序", () -> {
+//						getMesDataJob.process();
+//						return 0;
+//					})
 			);
 
 			for (Task t : tasks) {
 				String taskStartStr = DateUtil.formatDateTime(LocalDateTime.now());
 				long taskStart = System.currentTimeMillis();
 
-				log.info("【任务开始】{} | 时间：{}", t.name, taskStartStr);
-				System.out.println(String.format("【任务开始】%s | 时间：%s", t.name, taskStartStr));
+				log.info("【ERP任务开始】{} | 时间：{}", t.name, taskStartStr);
+				System.out.println(String.format("【ERP任务开始】%s | 时间：%s", t.name, taskStartStr));
 
 				try {
 					int count = t.action.get();
 					long duration = System.currentTimeMillis() - taskStart;
 
 					if (count == 0 && t.name.startsWith("MES")) {
-						log.info("【任务结束】{} | 完成内部逻辑，无统计数量 | 耗时：{} ms", t.name, duration);
-						System.out.println(String.format("【任务结束】%s | 完成内部逻辑，无统计数量 | 耗时：%d ms", t.name, duration));
+						log.info("【ERP任务结束】{} | 完成内部逻辑，无统计数量 | 耗时：{} ms", t.name, duration);
+						System.out.println(String.format("【ERP任务结束】%s | 完成内部逻辑，无统计数量 | 耗时：%d ms", t.name, duration));
 					} else {
-						log.info("【任务结束】{} | 数量：{} | 耗时：{} ms", t.name, count, duration);
-						System.out.println(String.format("【任务结束】%s | 数量：%d | 耗时：%d ms", t.name, count, duration));
+						log.info("【ERP任务结束】{} | 数量：{} | 耗时：{} ms", t.name, count, duration);
+						System.out.println(String.format("【ERP任务结束】%s | 数量：%d | 耗时：%d ms", t.name, count, duration));
 					}
 
 				} catch (Exception e) {
 					long duration = System.currentTimeMillis() - taskStart;
-					log.error("【任务失败】{} | 耗时：{} ms | 错误：{}", t.name, duration, e.getMessage(), e);
-					System.err.println(String.format("【任务失败】%s | 耗时：%d ms | 错误：%s", t.name, duration, e.getMessage()));
+					log.error("【ERP任务失败】{} | 耗时：{} ms | 错误：{}", t.name, duration, e.getMessage(), e);
+					System.err.println(String.format("【ERP任务失败】%s | 耗时：%d ms | 错误：%s", t.name, duration, e.getMessage()));
 				}
 			}
 
 			long totalDuration = System.currentTimeMillis() - totalStart;
 			String totalEndStr = DateUtil.formatDateTime(LocalDateTime.now());
-			log.info("======【同步任务结束】{} | 总耗时：{} ms======", totalEndStr, totalDuration);
-			System.out.println(String.format("======【同步任务结束】%s | 总耗时：%d ms======", totalEndStr, totalDuration));
+			log.info("======【ERP同步任务结束】{} | 总耗时：{} ms======", totalEndStr, totalDuration);
+			System.out.println(String.format("======【ERP同步任务结束】%s | 总耗时：%d ms======", totalEndStr, totalDuration));
 
 		} finally {
 			running = false; // 保证任务结束后重置标志位
@@ -109,40 +116,14 @@ public class GetErpDataJob {
 	}
 
 
-	//=========================== 包装bom和工序的调试接口（内部按时间）===================================
-
-
-	//	外同步接口  || 只测试外同步（  原料物料+bom物料、 bom临时依赖、  工序表）
-	public void syncErpToMes(String syncTime) {
-		// 外部同步  忽略时间
-		syncErpToMes(); // 调用原方法（无参数）
-	}
-
-	//  内同步接口  || 只测试内同步（bom和工序）（按时间）
-	public void syncErpToMesBom(String syncTime) {
-		if (syncTime != null && !syncTime.isEmpty()) {
-			getMesDataJob.setStartTime(syncTime); // 新增：传入时间覆盖 startTime
-		}
-		syncErpToMesBomBom(); // 调用原方法（无参数）
-	}
-
-
-	//  内同步接口  || 只测试内同步（bom和工序）（按itemno）
-	public void syncErpToMesBomItemNo(String itemNo, String bomNo) {
-
-		syncErpToMesBomBomItemNo(itemNo,bomNo); // 调用
-	}
-
-
-	//===========================接口===================================
-
 	/**
-	 *  接口  || 只测试外同步（  原料物料+bom物料、 bom临时依赖、  工序表）
+	 * 整体MES构建方法   (2025-03 k开始构建bom ,   工序构建为最近一小时)
 	 */
-	public void syncErpToMes() {
+	@Scheduled(cron = "0 0/6 * * * ?")
+	public void syncErpToMesAll007() {
 		if (running) {
-			log.warn("======【同步任务正在执行，跳过本次调度】======");
-			System.out.println("======【同步任务正在执行，跳过本次调度】======");
+			log.warn("======【MES构建任务正在执行，跳过本次调度】======");
+			System.out.println("======【MES构建任务正在执行，跳过本次调度】======");
 			return;
 		}
 
@@ -150,20 +131,24 @@ public class GetErpDataJob {
 		long totalStart = System.currentTimeMillis();
 		String totalStartStr = DateUtil.formatDateTime(LocalDateTime.now());
 
-		log.info("======【同步任务开始】{}======", totalStartStr);
-		System.out.println(String.format("======【同步任务开始】%s======", totalStartStr));
+		log.info("======【MES构建任务开始】{}======", totalStartStr);
+		System.out.println(String.format("======【MES构建任务开始】%s======", totalStartStr));
+
+
+		//mes工序  （工序构建为最近一小时）
+		DateTimeFormatter onTime = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+		String st = "2025-03-05 11:50:00";  // 从新构建
 
 		try {
 			List<Task> tasks = Arrays.asList(
-//					new Task("ERP 物料", mesToErpDataService::syncItemStock),
-//					new Task("ERP 工序", mesToErpDataService::syncProcedure),
-//					new Task("ERP BOM依赖", mesToErpDataService::syncBomTree),
+
 					new Task("MES BOM依赖", () -> {
-						getMesDataJob.bom();
+						getMesDataJob.bom(st);
 						return 0;
 					}),
+
 					new Task("MES 工序", () -> {
-						getMesDataJob.process();
+						getMesDataJob.process(onTime.toString());
 						return 0;
 					})
 			);
@@ -172,198 +157,49 @@ public class GetErpDataJob {
 				String taskStartStr = DateUtil.formatDateTime(LocalDateTime.now());
 				long taskStart = System.currentTimeMillis();
 
-				log.info("【任务开始】{} | 时间：{}", t.name, taskStartStr);
-				System.out.println(String.format("【任务开始】%s | 时间：%s", t.name, taskStartStr));
+				log.info("【MES任务开始】{} | 时间：{}", t.name, taskStartStr);
+				System.out.println(String.format("【MES任务开始】%s | 时间：%s", t.name, taskStartStr));
 
 				try {
 					int count = t.action.get();
 					long duration = System.currentTimeMillis() - taskStart;
 
 					if (count == 0 && t.name.startsWith("MES")) {
-						log.info("【任务结束】{} | 完成内部逻辑，无统计数量 | 耗时：{} ms", t.name, duration);
-						System.out.println(String.format("【任务结束】%s | 完成内部逻辑，无统计数量 | 耗时：%d ms", t.name, duration));
+						log.info("【MES任务结束】{} | 完成内部逻辑，无统计数量 | 耗时：{} ms", t.name, duration);
+						System.out.println(String.format("【MES任务结束】%s | 完成内部逻辑，无统计数量 | 耗时：%d ms", t.name, duration));
 					} else {
-						log.info("【任务结束】{} | 数量：{} | 耗时：{} ms", t.name, count, duration);
-						System.out.println(String.format("【任务结束】%s | 数量：%d | 耗时：%d ms", t.name, count, duration));
+						log.info("【MES任务结束】{} | 数量：{} | 耗时：{} ms", t.name, count, duration);
+						System.out.println(String.format("【MES任务结束】%s | 数量：%d | 耗时：%d ms", t.name, count, duration));
 					}
 
 				} catch (Exception e) {
 					long duration = System.currentTimeMillis() - taskStart;
-					log.error("【任务失败】{} | 耗时：{} ms | 错误：{}", t.name, duration, e.getMessage(), e);
-					System.err.println(String.format("【任务失败】%s | 耗时：%d ms | 错误：%s", t.name, duration, e.getMessage()));
+					log.error("【MES任务失败】{} | 耗时：{} ms | 错误：{}", t.name, duration, e.getMessage(), e);
+					System.err.println(String.format("【MES任务失败】%s | 耗时：%d ms | 错误：%s", t.name, duration, e.getMessage()));
 				}
 			}
 
 			long totalDuration = System.currentTimeMillis() - totalStart;
 			String totalEndStr = DateUtil.formatDateTime(LocalDateTime.now());
-			log.info("======【同步任务结束】{} | 总耗时：{} ms======", totalEndStr, totalDuration);
-			System.out.println(String.format("======【同步任务结束】%s | 总耗时：%d ms======", totalEndStr, totalDuration));
+			log.info("======【MES构建任务结束】{} | 总耗时：{} ms======", totalEndStr, totalDuration);
+			System.out.println(String.format("======【MES构建任务结束】%s | 总耗时：%d ms======", totalEndStr, totalDuration));
 
 		} finally {
 			running = false; // 保证任务结束后重置标志位
 		}
 	}
 
-
-
-	/**
-	 * 接口  || 只测试内同步（bom和工序）（按时间）
-	 */
-	public void syncErpToMesBomBom() {
-		if (running) {
-			log.warn("======【同步任务正在执行，跳过本次调度】======");
-			System.out.println("======【同步任务正在执行，跳过本次调度】======");
-			return;
-		}
-
-		running = true; // 标记任务开始
-		long totalStart = System.currentTimeMillis();
-		String totalStartStr = DateUtil.formatDateTime(LocalDateTime.now());
-
-		log.info("======【同步任务开始】{}======", totalStartStr);
-		System.out.println(String.format("======【同步任务开始】%s======", totalStartStr));
-
-		try {
-			List<Task> tasks = Arrays.asList(
-//					new Task("ERP 物料", mesToErpDataService::syncItemStock),
-//					new Task("ERP 工序", mesToErpDataService::syncProcedure),
-//					new Task("ERP BOM依赖", mesToErpDataService::syncBomTree),
-					new Task("MES BOM依赖", () -> {
-						getMesDataJob.bom();
-						return 0;
-					}),
-					new Task("MES 工序", () -> {
-						getMesDataJob.process();
-						return 0;
-					})
-			);
-
-			for (Task t : tasks) {
-				String taskStartStr = DateUtil.formatDateTime(LocalDateTime.now());
-				long taskStart = System.currentTimeMillis();
-
-				log.info("【任务开始】{} | 时间：{}", t.name, taskStartStr);
-				System.out.println(String.format("【任务开始】%s | 时间：%s", t.name, taskStartStr));
-
-				try {
-					int count = t.action.get();
-					long duration = System.currentTimeMillis() - taskStart;
-
-					if (count == 0 && t.name.startsWith("MES")) {
-						log.info("【任务结束】{} | 完成内部逻辑，无统计数量 | 耗时：{} ms", t.name, duration);
-						System.out.println(String.format("【任务结束】%s | 完成内部逻辑，无统计数量 | 耗时：%d ms", t.name, duration));
-					} else {
-						log.info("【任务结束】{} | 数量：{} | 耗时：{} ms", t.name, count, duration);
-						System.out.println(String.format("【任务结束】%s | 数量：%d | 耗时：%d ms", t.name, count, duration));
-					}
-
-				} catch (Exception e) {
-					long duration = System.currentTimeMillis() - taskStart;
-					log.error("【任务失败】{} | 耗时：{} ms | 错误：{}", t.name, duration, e.getMessage(), e);
-					System.err.println(String.format("【任务失败】%s | 耗时：%d ms | 错误：%s", t.name, duration, e.getMessage()));
-				}
-			}
-
-			long totalDuration = System.currentTimeMillis() - totalStart;
-			String totalEndStr = DateUtil.formatDateTime(LocalDateTime.now());
-			log.info("======【同步任务结束】{} | 总耗时：{} ms======", totalEndStr, totalDuration);
-			System.out.println(String.format("======【同步任务结束】%s | 总耗时：%d ms======", totalEndStr, totalDuration));
-
-		} finally {
-			running = false; // 保证任务结束后重置标志位
-		}
-	}
-
-	/**
-	 * 接口  || 只测试内同步（bom和工序）（按物料号）
-	 * 	如果 itemNo = "0" → 不执行 MES BOM依赖 的任务；
-	 */
-	public void syncErpToMesBomBomItemNo(String itemNo, String bomNo) {
-		if (running) {
-			log.warn("======【同步任务正在执行，跳过本次调度】======");
-			System.out.println("======【同步任务正在执行，跳过本次调度】======");
-			return;
-		}
-
-		running = true; // 标记任务开始
-		long totalStart = System.currentTimeMillis();
-		String totalStartStr = DateUtil.formatDateTime(LocalDateTime.now());
-
-		log.info("======【同步任务开始】{}======", totalStartStr);
-		System.out.println(String.format("======【同步任务开始】%s======", totalStartStr));
-
-		try {
-
-			// 构建任务列表
-			List<Task> tasks = new ArrayList<>();
-			tasks.add(new Task("MES BOM依赖", () -> {
-				getMesDataJob.bomByItem(itemNo, bomNo);
-				return 0;
-			}));
-			tasks.add(new Task("MES 工序", () -> {
-				getMesDataJob.processItem(itemNo);
-				return 0;
-			}));
-
-			//			如果 itemNo = "0" → 不执行 MES BOM依赖 的任务；
-//			if (!"0".equals(itemNo)) {
-//				tasks.add(new Task("MES BOM依赖", () -> {
-//					getMesDataJob.bomByItem(itemNo, bomNo);
-//					return 0;
-//				}));
-//			}else{
-//				tasks.add(new Task("MES 工序", () -> {
-//					getMesDataJob.process();
-//					return 0;
-//				}));
-//			}
-
-			for (Task t : tasks) {
-				String taskStartStr = DateUtil.formatDateTime(LocalDateTime.now());
-				long taskStart = System.currentTimeMillis();
-
-				log.info("【任务开始】{} | 时间：{}", t.name, taskStartStr);
-				System.out.println(String.format("【任务开始】%s | 时间：%s", t.name, taskStartStr));
-
-				try {
-					int count = t.action.get();
-					long duration = System.currentTimeMillis() - taskStart;
-
-					if (count == 0 && t.name.startsWith("MES")) {
-						log.info("【任务结束】{} | 完成内部逻辑，无统计数量 | 耗时：{} ms", t.name, duration);
-						System.out.println(String.format("【任务结束】%s | 完成内部逻辑，无统计数量 | 耗时：%d ms", t.name, duration));
-					} else {
-						log.info("【任务结束】{} | 数量：{} | 耗时：{} ms", t.name, count, duration);
-						System.out.println(String.format("【任务结束】%s | 数量：%d | 耗时：%d ms", t.name, count, duration));
-					}
-
-				} catch (Exception e) {
-					long duration = System.currentTimeMillis() - taskStart;
-					log.error("【任务失败】{} | 耗时：{} ms | 错误：{}", t.name, duration, e.getMessage(), e);
-					System.err.println(String.format("【任务失败】%s | 耗时：%d ms | 错误：%s", t.name, duration, e.getMessage()));
-				}
-			}
-
-			long totalDuration = System.currentTimeMillis() - totalStart;
-			String totalEndStr = DateUtil.formatDateTime(LocalDateTime.now());
-			log.info("======【同步任务结束】{} | 总耗时：{} ms======", totalEndStr, totalDuration);
-			System.out.println(String.format("======【同步任务结束】%s | 总耗时：%d ms======", totalEndStr, totalDuration));
-
-		} finally {
-			running = false; // 保证任务结束后重置标志位
-		}
-	}
 
 
 
 	//===========================辅助工具===================================
 
 
-
 	// 任务工具辅助方法
 	private static class Task {
 		final String name;
 		final Supplier<Integer> action;
+
 		Task(String name, Supplier<Integer> action) {
 			this.name = name;
 			this.action = action;
@@ -373,8 +209,9 @@ public class GetErpDataJob {
 	//===========================旧===================================
 
 	private volatile String startTime = "2025-06-01 00:00:00";
+
 	/**
-	 *  ERP基础数据同步  oracle数据库  原始
+	 * ERP基础数据同步  oracle数据库  原始
 	 */
 //	@Scheduled(cron = "0 0/30 * * * ?")
 	public void synchronousFromErp() {
@@ -386,8 +223,6 @@ public class GetErpDataJob {
 		startTime = DateUtil.formatDateTime(LocalDateTime.now());
 
 	}
-
-
 
 
 }

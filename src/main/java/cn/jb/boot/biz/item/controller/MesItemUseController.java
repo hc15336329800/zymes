@@ -55,67 +55,67 @@ public class MesItemUseController {
     private GetErpDataJob getErpDataJob; // 注入外部同步任务类
 
 
-    ////////////////////////////////////////////更新测试  手动同步接口/////////////////////////////////////////////
+    ////////////////////////////////////////////更新测试  手动同步接口   先注释  后面要用/////////////////////////////////////////////
 
 
-    /**
-     *  内同步接口  || 只测试内同步（bom和工序）（按ITEM）
-     */
-    @PostMapping("/inner_sync_bom_item")
-    @Operation(summary = "内部同步BOM树")
-    public AjaxResult innerSyncBomItem (@RequestBody(required = false) Map<String, Object> params) {
-        try {
-            String ItemNo = Optional.ofNullable(params)
-                    .map(p -> (String)p.get("ItemNo"))
-                    .orElse(null);
-
-            String bomNo = Optional.ofNullable(params)
-                    .map(p -> (String)p.get("bomNo"))
-                    .orElse(null);
-
-            getErpDataJob.syncErpToMesBomItemNo(ItemNo,bomNo);
-
-            return AjaxResult.success("外部同步ERP数据到MES完成");
-        } catch (Exception e) {
-            return AjaxResult.error("外部同步ERP数据到MES失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     *  内同步接口  || 只测试内同步（bom和工序）（按时间）
-     */
-    @PostMapping("/inner_sync_bom")
-    @Operation(summary = "内部同步BOM树")
-    public AjaxResult innerSyncBom (@RequestBody(required = false) Map<String, Object> params) {
-        try {
-            String syncTime = Optional.ofNullable(params)
-                    .map(p -> (String)p.get("syncTime"))
-                    .orElse(null);
-
-            getErpDataJob.syncErpToMesBom(syncTime);
-            return AjaxResult.success("外部同步ERP数据到MES完成");
-        } catch (Exception e) {
-            return AjaxResult.error("外部同步ERP数据到MES失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 外同步接口  || 只测试外同步（  原料物料+bom物料、 bom临时依赖、  工序表）
-     */
-    @PostMapping("/sync_erp_to_mes")
-    @Operation(summary = "外部同步ERP数据到MES")
-    public AjaxResult syncErpToMes(@RequestBody(required = false) Map<String, Object> params) {
-        try {
-            String syncTime = Optional.ofNullable(params)
-                    .map(p -> (String)p.get("syncTime"))
-                    .orElse(null);
-
-            getErpDataJob.syncErpToMes(syncTime);
-            return AjaxResult.success("外部同步ERP数据到MES完成");
-        } catch (Exception e) {
-            return AjaxResult.error("外部同步ERP数据到MES失败: " + e.getMessage());
-        }
-    }
+//    /**
+//     *  内同步接口  || 只测试内同步（bom和工序）（按ITEM）
+//     */
+//    @PostMapping("/inner_sync_bom_item")
+//    @Operation(summary = "内部同步BOM树")
+//    public AjaxResult innerSyncBomItem (@RequestBody(required = false) Map<String, Object> params) {
+//        try {
+//            String ItemNo = Optional.ofNullable(params)
+//                    .map(p -> (String)p.get("ItemNo"))
+//                    .orElse(null);
+//
+//            String bomNo = Optional.ofNullable(params)
+//                    .map(p -> (String)p.get("bomNo"))
+//                    .orElse(null);
+//
+//            getErpDataJob.syncErpToMesBomItemNo(ItemNo,bomNo);
+//
+//            return AjaxResult.success("外部同步ERP数据到MES完成");
+//        } catch (Exception e) {
+//            return AjaxResult.error("外部同步ERP数据到MES失败: " + e.getMessage());
+//        }
+//    }
+//
+//    /**
+//     *  内同步接口  || 只测试内同步（bom和工序）（按时间）
+//     */
+//    @PostMapping("/inner_sync_bom")
+//    @Operation(summary = "内部同步BOM树")
+//    public AjaxResult innerSyncBom (@RequestBody(required = false) Map<String, Object> params) {
+//        try {
+//            String syncTime = Optional.ofNullable(params)
+//                    .map(p -> (String)p.get("syncTime"))
+//                    .orElse(null);
+//
+//            getErpDataJob.syncErpToMesBom(syncTime);
+//            return AjaxResult.success("外部同步ERP数据到MES完成");
+//        } catch (Exception e) {
+//            return AjaxResult.error("外部同步ERP数据到MES失败: " + e.getMessage());
+//        }
+//    }
+//
+//    /**
+//     * 外同步接口  || 只测试外同步（  原料物料+bom物料、 bom临时依赖、  工序表）
+//     */
+//    @PostMapping("/sync_erp_to_mes")
+//    @Operation(summary = "外部同步ERP数据到MES")
+//    public AjaxResult syncErpToMes(@RequestBody(required = false) Map<String, Object> params) {
+//        try {
+//            String syncTime = Optional.ofNullable(params)
+//                    .map(p -> (String)p.get("syncTime"))
+//                    .orElse(null);
+//
+//            getErpDataJob.syncErpToMes(syncTime);
+//            return AjaxResult.success("外部同步ERP数据到MES完成");
+//        } catch (Exception e) {
+//            return AjaxResult.error("外部同步ERP数据到MES失败: " + e.getMessage());
+//        }
+//    }
 
 
 

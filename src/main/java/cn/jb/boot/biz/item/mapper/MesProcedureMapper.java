@@ -36,6 +36,9 @@ public interface MesProcedureMapper extends BaseMapper<MesProcedure> {
 
     List<String> selectNearItemNo(String startTime);
 
+
+    List<String> selectNearItemNo();
+
     List<ProcListResp> listNameByShortCode(@Param("p") ShortCodeReq params);
 
     List<ItemProcedureResponse> listProcedureByItem(@Param("p") ItemProcedureRequest params);

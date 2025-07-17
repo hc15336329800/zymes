@@ -12,7 +12,7 @@ public class TimeTaskConfig {
     private httpGetDataServiceImpl httpGetDataService;
 
     //上海嘉意从CSV中获取数据
-    @Scheduled(cron = "0 */1 * * * ?")
+//    @Scheduled(cron = "0 */1 * * * ?")
     public void monitoringDataTransmissionTask() {
 
         System.out.println("info:  上海嘉意从CSV中获取数据（频率一分钟） 已关闭");
