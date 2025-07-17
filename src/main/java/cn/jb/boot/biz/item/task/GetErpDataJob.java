@@ -32,7 +32,10 @@ public class GetErpDataJob {
 	private GetMesDataJob getMesDataJob; // 新增：注入 GetMesDataJob
 
 
-	private volatile boolean running = false; // 防止重复执行标志位
+	private volatile boolean runningErp = false; // 防止重复执行标志位
+
+	private volatile boolean runningMes = false; // 防止重复执行标志位
+
 
 
 
@@ -46,15 +49,15 @@ public class GetErpDataJob {
 	/**
 	 * 整体ERP同步方法
 	 */
-	@Scheduled(cron = "0 0/3 * * * ?")
+	@Scheduled(cron = "0 0/10 * * * ?")
 	public void syncErpToMesAll() {
-		if (running) {
+		if (runningErp) {
 			log.warn("======【ERP同步任务正在执行，跳过本次调度】======");
 			System.out.println("======【ERP同步任务正在执行，跳过本次调度】======");
 			return;
 		}
 
-		running = true; // 标记任务开始
+		runningErp = true; // 标记任务开始
 		long totalStart = System.currentTimeMillis();
 		String totalStartStr = DateUtil.formatDateTime(LocalDateTime.now());
 
@@ -111,7 +114,7 @@ public class GetErpDataJob {
 			System.out.println(String.format("======【ERP同步任务结束】%s | 总耗时：%d ms======", totalEndStr, totalDuration));
 
 		} finally {
-			running = false; // 保证任务结束后重置标志位
+			runningErp = false; // 保证任务结束后重置标志位
 		}
 	}
 
@@ -119,15 +122,15 @@ public class GetErpDataJob {
 	/**
 	 * 整体MES构建方法   (2025-03 k开始构建bom ,   工序构建为最近一小时)
 	 */
-	@Scheduled(cron = "0 0/5 * * * ?")
+	@Scheduled(cron = "0 0/30 * * * ?")
 	public void syncErpToMesAll007() {
-		if (running) {
+		if (runningMes) {
 			log.warn("======【MES构建任务正在执行，跳过本次调度】======");
 			System.out.println("======【MES构建任务正在执行，跳过本次调度】======");
 			return;
 		}
 
-		running = true; // 标记任务开始
+		runningMes = true; // 标记任务开始
 		long totalStart = System.currentTimeMillis();
 		String totalStartStr = DateUtil.formatDateTime(LocalDateTime.now());
 
@@ -188,7 +191,7 @@ public class GetErpDataJob {
 			System.out.println(String.format("======【MES构建任务结束】%s | 总耗时：%d ms======", totalEndStr, totalDuration));
 
 		} finally {
-			running = false; // 保证任务结束后重置标志位
+			runningMes = false; // 保证任务结束后重置标志位
 		}
 	}
 
