@@ -73,6 +73,8 @@ public class AgvManageInfoServiceImpl extends ServiceImpl<AgvManageInfoMapper, A
     @Resource
     private MesProcedureServiceImpl mesProcedureServiceImpl;
 
+
+//    把业务参数中的起点/终点转换成AGV实际的点位坐标和命令字，然后新增进库
     @Override
     public void createInfo(AgvManageInfoPageRequest params) {
         //查询起始点和结束点
