@@ -122,7 +122,7 @@ public class GetErpDataJob {
 	/**
 	 * 整体MES构建方法   (2025-03 k开始构建bom ,   工序构建为最近一小时)
 	 */
-	@Scheduled(cron = "0 0/10 * * * ?")
+	@Scheduled(cron = "0 0/5 * * * ?")
 	public void syncErpToMesAll007() {
 		if (runningMes) {
 			log.warn("======【MES构建任务正在执行，跳过本次调度】======");

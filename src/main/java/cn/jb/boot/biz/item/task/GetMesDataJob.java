@@ -52,18 +52,20 @@ public class GetMesDataJob {
 
 	//===========================调试===================================
 
-	//单个bom构建测试
-	@Scheduled(cron = "0 0/1 * * * ?")
-	public void bomByItemCS(){
+//	//单个bom构建测试
+//	@Scheduled(cron = "0 0/1 * * * ?")
+//	public void bomByItemCS(){
+//
+//
+//		log.info("临时调试...600159（记得关闭计时器）");
+//		System.out.println("临时调试...600159（记得关闭计时器）" );
+//		String itemNo="600159";
+//		String bomNo ="2516004414-1";
+//		    bomByItem(  itemNo,   bomNo);
+//
+//	}
 
 
-		log.info("临时调试...600159（记得关闭计时器）");
-		System.out.println("临时调试...600159（记得关闭计时器）" );
-		String itemNo="600159";
-		String bomNo ="2516004414-1";
-		    bomByItem(  itemNo,   bomNo);
-
-	}
 
 	//===========================同步bom树（按时间）===================================
 
