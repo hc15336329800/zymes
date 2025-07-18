@@ -260,6 +260,7 @@ public class BomUsedServiceImpl extends ServiceImpl<BomUsedMapper, BomUsed> impl
 
         if (depth > 20) {
             log.warn("超过最大层级保护: {}, 当前层级: {}", itemNo, depth);
+            visited.remove(itemNo); // 【修复：回溯】
             return;
         }
 
@@ -297,6 +298,8 @@ public class BomUsedServiceImpl extends ServiceImpl<BomUsedMapper, BomUsed> impl
                 findChildUse(miu.getUseItemNo(), used.getItemNos(), count, list, visited, depth + 1);
             }
         }
+        visited.remove(itemNo); // 【修复：回溯时移除，避免兄弟分支误判环】
+
     }
 
 
