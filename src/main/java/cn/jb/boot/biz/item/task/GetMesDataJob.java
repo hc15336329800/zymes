@@ -15,6 +15,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -49,9 +50,20 @@ public class GetMesDataJob {
 	private volatile String startTime = "2025-03-05 11:50:00";  //内部BOM依赖从这个日期开始更新 ！
 
 
-	//===========================同步物料===================================
+	//===========================调试===================================
 
-	//无需同步
+	//单个bom构建测试
+	@Scheduled(cron = "0 0/1 * * * ?")
+	public void bomByItemCS(){
+
+
+		log.info("临时调试...600159（记得关闭计时器）");
+		System.out.println("临时调试...600159（记得关闭计时器）" );
+		String itemNo="600159";
+		String bomNo ="2516004414-1";
+		    bomByItem(  itemNo,   bomNo);
+
+	}
 
 	//===========================同步bom树（按时间）===================================
 
@@ -106,6 +118,8 @@ public class GetMesDataJob {
 	public void bomByItem(String itemNo, String bomNo){
 
  		log.info("开始加载BOM用料...");
+
+
 
 		 if ("0".equals(bomNo)){
 			 System.out.println("Info:  bomNo=0" );

@@ -84,7 +84,7 @@ public class BomUsedNewUtil {
 				resps.add(resp);
 			}
 		}
-		visited.remove(itemNo); // 【修复：回溯时移除，防止兄弟分支误判】
+		visited.remove(itemNo); // 【修复循环依赖：回溯时移除，防止兄弟分支误判】
 		return resps;
 	}
 
