@@ -2,11 +2,13 @@ package cn.jb.boot.biz.item.vo.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import lombok.experimental.Accessors;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 @Data
+@Accessors(chain = true)                // ← 新增：开启链式 setter
 public class UseItemTreeResp {
 
     @Schema(description = "产品编码")

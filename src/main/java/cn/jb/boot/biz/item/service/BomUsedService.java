@@ -43,5 +43,9 @@ public interface BomUsedService extends IService<BomUsed> {
 
     void loadParBomData(String itemNo, List<String> itList);
 
-    List<BomUsed> tree(String itemNo);
+
+    /**
+     * 批量拉整棵树并组装成前端响应对象
+     */
+    UseItemTreeResp tree(String itemNo);
 }

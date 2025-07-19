@@ -1,6 +1,7 @@
 package cn.jb.boot.biz.item.task;
 
 
+import cn.jb.boot.biz.item.entity.BomUsed;
 import cn.jb.boot.biz.item.entity.MesItemStock;
 import cn.jb.boot.biz.item.entity.MesProcedure;
 import cn.jb.boot.biz.item.entity.MidItemStock;
@@ -8,15 +9,17 @@ import cn.jb.boot.biz.item.mapper.MesProcedureMapper;
 import cn.jb.boot.biz.item.service.BomUsedService;
 import cn.jb.boot.biz.item.service.MesItemStockService;
 import cn.jb.boot.biz.item.service.MidItemStockService;
+import cn.jb.boot.biz.item.vo.response.UseItemTreeResp;
 import cn.jb.boot.framework.common.utils.StringUtils;
 import cn.jb.boot.framework.enums.JbEnum;
+import cn.jb.boot.util.BomUsedUtil;
 import cn.jb.boot.util.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
@@ -25,7 +28,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 
 /**
  * MES内部基础数据同步      V1.1
@@ -45,9 +47,10 @@ public class GetMesDataJob {
 	@Resource
 	private BomUsedService bomUsedService;
 
+
 	private static final String lastName = "装车";
 
-//	private volatile String startTime = "2025-06-30 17:39:00";  //内部BOM依赖从这个日期开始更新 ！
+	//	private volatile String startTime = "2025-06-30 17:39:00";  //内部BOM依赖从这个日期开始更新 ！
 	private volatile String startTime = "2025-03-05 11:50:00";  //内部BOM依赖从这个日期开始更新 ！
 
 
@@ -67,11 +70,53 @@ public class GetMesDataJob {
 //	}
 
 
+	//===========================优化递归构建===================================
+
+	/**
+	 * 使用 treeAll + BomUsedNewUtil 一次性重构所有更新物料的 BOM 依赖
+	 *
+	 * @param startTime 起始时间字符串
+	 * @return 总共保存的 BOM 依赖记录数
+	 */
+	@Transactional(rollbackFor = Throwable.class)
+	public int bomWithTreeAll(String startTime) {
+		// 1. 找出所有受影响的 BOM 物料
+		List<MesItemStock> itemList = mesItemStockService.selectBoms(startTime);
+		if (CollectionUtils.isEmpty(itemList)) {
+			log.info("无 BOM 物料需更新，跳过 MES BOM 依赖构建");
+			return 0;
+		}
+
+		// 2. 对每个物料调用新 treeAll 接口，拿到前端树结构
+		List<BomUsed> allDeps = new ArrayList<>();
+		for (MesItemStock stock : itemList) {
+			// treeAll 一次性拉整棵树并组装主数据
+			UseItemTreeResp tree = bomUsedService.tree(stock.getItemNo());
+
+			// 将 UseItemTreeResp 转回平展的 BomUsed 列表
+			List<BomUsed> deps = BomUsedUtil.flattenTree(tree);
+			allDeps.addAll(deps);
+		}
+
+		// 3. 删除老的依赖，批量保存新的依赖
+		bomUsedService.remove(new LambdaQueryWrapper<BomUsed>()
+				.in(BomUsed::getItemNo,
+						itemList.stream()
+								.map(MesItemStock::getItemNo)
+								.collect(Collectors.toList())
+				)
+		);
+		bomUsedService.saveBatch(allDeps);
+
+		log.info("MES BOM依赖重构完成，共插入 {} 条记录", allDeps.size());
+		return allDeps.size();
+	}
+
 
 	//===========================同步bom树（按时间）===================================
 
 
-//	确保外部传时间覆盖原有 startTime。
+	//	确保外部传时间覆盖原有 startTime。
 	public void setStartTime(String startTime) {
 		if (startTime != null && !startTime.isEmpty()) {
 			this.startTime = startTime;
@@ -80,15 +125,12 @@ public class GetMesDataJob {
 	}
 
 
-
 	public void bom(String st) {
 		long start = System.currentTimeMillis();
 		log.info("开始加载BOM用料（含递归父件）...");
 		bomUsedService.loadWithParents(st);
 		log.info("加载BOM用料完成...cost:{}ms", System.currentTimeMillis() - start);
 	}
-
-
 
 
 	/**
@@ -114,7 +156,7 @@ public class GetMesDataJob {
 	public void bom() {
 
 
-		  String st = "2025-03-05 11:50:00";  // 从新构建
+		String st = "2025-03-05 11:50:00";  // 从新构建
 
 		long start = System.currentTimeMillis();
 		log.info("开始加载BOM用料...");
@@ -130,19 +172,18 @@ public class GetMesDataJob {
 	 * 内部同步bom树（按物料号和bom号）
 	 * 读取：mes_item_stock, mes_item_use     删除/插入：t_bom_used
 	 */
-	public void bomByItem(String itemNo, String bomNo){
+	public void bomByItem(String itemNo, String bomNo) {
 
- 		log.info("开始加载BOM用料...");
+		log.info("开始加载BOM用料...");
 
 
+		if ("0".equals(bomNo)) {
+			System.out.println("Info:  bomNo=0");
 
-		 if ("0".equals(bomNo)){
-			 System.out.println("Info:  bomNo=0" );
-
-		 }else {
-			 System.out.println("Info:  bomNo="+bomNo );
- 			 bomUsedService.loadByItem(itemNo,bomNo); //构建bom树
-		 }
+		} else {
+			System.out.println("Info:  bomNo=" + bomNo);
+			bomUsedService.loadByItem(itemNo, bomNo); //构建bom树
+		}
 
 //		startTime = DateUtil.formatDateTime(LocalDateTime.now());   //注意重置时间
 //		System.out.println("Info:  同步重置时间" + startTime);
@@ -154,7 +195,7 @@ public class GetMesDataJob {
 	public void processItem(String itemNo) {
 
 		//        补全缺失的中间工序记录：如果 mes_procedure 有但 t_mid_item_stock 中没有，就插入t_mid_item_stock
-		addUpdateMidItemStockItem( itemNo);
+		addUpdateMidItemStockItem(itemNo);
 		//        动态更新当前进展工序标识和初始库存数量，更新 last_flag = '01' 与 initial_count
 		updateMidItemStock();
 	}
@@ -202,8 +243,6 @@ public class GetMesDataJob {
 	}
 
 
-
-
 	//===========================同步工序 及 中间件量（按时间）===================================
 
 	/**
@@ -218,10 +257,9 @@ public class GetMesDataJob {
 	}
 
 
-
 	//        把 mes_procedure 表中有，但 t_mid_item_stock 表中没有的工序数据，筛选出来，然后插入到 t_mid_item_stock 表中。（按时间）
 	//        V1.1    先删后增
-	private void addUpdateMidItemStock(String  st) {
+	private void addUpdateMidItemStock(String st) {
 		// 1️⃣ 查出 mes_procedure 中存在的 item_no 列表（用于逐个处理）
 		List<String> itemNos = mesProcedureMapper.selectNearItemNo(st);
 
@@ -257,10 +295,8 @@ public class GetMesDataJob {
 			midItemStockService.saveBatch(list);
 
 
-
 		}
 	}
-
 
 
 	/**
@@ -334,9 +370,8 @@ public class GetMesDataJob {
 	}
 
 
-
 	/**
-	 *  重载 ： 按物料号更新
+	 * 重载 ： 按物料号更新
 	 */
 	private void updateMidItemStock() {
 		// 1. 查询最近更新过的 item_no 列表（依赖 XML 中 selectNearItemNo）
@@ -395,7 +430,6 @@ public class GetMesDataJob {
 		}
 
 	}
-
 
 
 }

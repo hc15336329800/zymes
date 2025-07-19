@@ -38,6 +38,14 @@ public interface MesItemStockService extends IService<MesItemStock> {
     void createInfo(MesItemStockCreateRequest params);
 
     /**
+     * 查询在指定时间之后更新且类型为 BOM 的物料记录
+     * @param startTime 起始时间，格式 "yyyy-MM-dd HH:mm:ss"
+     * @return MesItemStock 列表
+     */
+    List<MesItemStock> selectBoms(String startTime);
+
+
+    /**
      * 查询详情
      *
      * @param id 主键

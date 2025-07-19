@@ -144,9 +144,14 @@ public class MesItemUseServiceImpl extends ServiceImpl<MesItemUseMapper, MesItem
 
 	@Override
 	public UseItemTreeResp itemUseTree(ItemNoRequest params) {
-		//用料树
-		List<BomUsed> list = bomUsedService.tree(params.getItemNo());
+
+		// 1. 拿到内存树
+		UseItemTreeResp tree = bomUsedService.tree(params.getItemNo());
+// 2. 扁平化成 BOM 用料列表
+		List<BomUsed> list = BomUsedUtil.flattenTree(tree);
+// 3. 再按你原来的逻辑，组装成响应
 		return BomUsedUtil.tree(list, params.getItemNo());
+
 	}
 
 

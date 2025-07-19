@@ -49,7 +49,7 @@ public class GetErpDataJob {
 	/**
 	 * 整体ERP同步方法
 	 */
-	@Scheduled(cron = "0 0/10 * * * ?")
+	@Scheduled(cron = "0 0/2 * * * ?")
 	public void syncErpToMesAll() {
 		if (runningErp) {
 			log.warn("======【ERP同步任务正在执行，跳过本次调度】======");
@@ -122,7 +122,7 @@ public class GetErpDataJob {
 	/**
 	 * 整体MES构建方法   (2025-03 k开始构建bom ,   工序构建为最近一小时)
 	 */
-	@Scheduled(cron = "0 0/30 * * * ?")
+	@Scheduled(cron = "0 0/3 * * * ?")
 	public void syncErpToMesAll007() {
 		if (runningMes) {
 			log.warn("======【MES构建任务正在执行，跳过本次调度】======");
@@ -152,8 +152,10 @@ public class GetErpDataJob {
 			List<Task> tasks = Arrays.asList(
 
 					new Task("MES BOM依赖", () -> {
-						getMesDataJob.bom(processStr);
-						return 0;
+//						getMesDataJob.bom(processStr);
+//						return 0;
+						// 用全量 treeAll + 批量保存新方法
+						return getMesDataJob.bomWithTreeAll(processStr);
 					}),
 
 					new Task("MES 工序", () -> {

@@ -63,4 +63,44 @@ public class BomUsedUtil {
             resp.setBomNo(bomNo);
         }
     }
+
+
+    /**
+     * 将 UseItemTreeResp 树结构平展为 BomUsed 列表，用于批量保存
+     * @param root 整棵树的根节点
+     * @return BomUsed 实体列表
+     */
+    public static List<BomUsed> flattenTree(UseItemTreeResp root) {
+        List<BomUsed> result = new ArrayList<>();
+        if (root == null) {
+            return result;
+        }
+        traverse(root, root.getItemNo(), result);
+        return result;
+    }
+    /**
+     * 递归遍历每个节点，生成对应的 BomUsed 并收集
+     * @param node 当前节点
+     * @param treeRootItemNo 整棵树的根 itemNo，用作每条记录的 itemNo
+     * @param out 收集结果
+     */
+    private static void traverse(UseItemTreeResp node, String treeRootItemNo, List<BomUsed> out) {
+        // 构造 BomUsed 实体
+        BomUsed bu = new BomUsed();
+        bu.setItemNo(treeRootItemNo);
+        bu.setUseItemNo(node.getItemNo());
+        bu.setParentCode(node.getParentCode());
+        bu.setUsedId(node.getUsedId());
+        bu.setFixedUsed(node.getFixedUsed());
+        bu.setUseItemType(node.getItemType());
+        bu.setBomNo(node.getBomNo());
+        out.add(bu);
+
+        // 递归子节点
+        if (CollectionUtils.isNotEmpty(node.getChildren())) {
+            for (UseItemTreeResp child : node.getChildren()) {
+                traverse(child, treeRootItemNo, out);
+            }
+        }}
+
 }

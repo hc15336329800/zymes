@@ -1,5 +1,6 @@
 package cn.jb.boot.biz.item.service.impl;
 
+import cn.jb.boot.biz.item.dto.UseItemTreeRow;
 import cn.jb.boot.biz.item.entity.BomUsed;
 import cn.jb.boot.biz.item.entity.MesItemStock;
 import cn.jb.boot.biz.item.entity.MesItemUse;
@@ -10,6 +11,7 @@ import cn.jb.boot.biz.item.mapper.MesItemUseMapper;
 import cn.jb.boot.biz.item.service.BomUsedService;
 import cn.jb.boot.biz.item.vo.response.UseItemTreeResp;
 import cn.jb.boot.util.ArithUtil;
+import cn.jb.boot.util.BomUsedNewUtil;
 import cn.jb.boot.util.BomUsedUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -403,10 +405,27 @@ public class BomUsedServiceImpl extends ServiceImpl<BomUsedMapper, BomUsed> impl
      * @return 该物料的所有 BomUsed 列表
      */
     @Override
-    public List<BomUsed> tree(String itemNo) {
-        // 查询条件：item_no = itemNo
-        return this.list(new LambdaQueryWrapper<BomUsed>()
-                .eq(BomUsed::getItemNo, itemNo));
+    public UseItemTreeResp tree(String itemNo) {
+        // 1. 批量拿到整棵树（含 itemName）
+        List<UseItemTreeRow> rows = mapper.treeAll(itemNo);
+        if (CollectionUtils.isEmpty(rows)) {
+            return new UseItemTreeResp().setItemNo(itemNo).setChildren(Collections.emptyList());
+        }
+
+        // 2. 转成统一的 BomUsed 列表，利用已有工具批量查询主数据并组装树
+        List<BomUsed> buList = rows.stream().map(r -> {
+            BomUsed bu = new BomUsed();
+            bu.setParentCode(r.getParentCode());
+            bu.setUseItemNo(r.getUseItemNo());
+            bu.setFixedUsed(r.getFixedUsed());
+            bu.setUsedId(r.getUsedId().toString());
+            bu.setUseItemType(r.getItemType());
+            return bu;
+        }).collect(Collectors.toList());
+
+        // 3. 用新版工具一次性批量查主数据并组装前端树结构
+        return BomUsedNewUtil.tree(buList, itemNo);
     }
+
 
 }

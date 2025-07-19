@@ -24,6 +24,7 @@ public interface BomUsedMapper extends BaseMapper<BomUsed> {
 
 	/**
 	 * 扁平树 V2 : 拉取整棵递归树（含防环逻辑）
+	 * 递归 CTE，一次性取出整个 BOM 树并带上 itemName
 	 * @param itemNo 根物料编码
 	 */
 	List<UseItemTreeRow> treeAll(@Param("itemNo") String itemNo);

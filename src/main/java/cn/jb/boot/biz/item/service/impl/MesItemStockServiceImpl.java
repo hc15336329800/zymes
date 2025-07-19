@@ -67,6 +67,10 @@ public class MesItemStockServiceImpl extends ServiceImpl<MesItemStockMapper, Mes
     @Resource
     private MidItemStockService midItemStockService;
 
+    @Resource
+    private MesItemStockMapper stockMapper;
+
+
     @Override
     public void createInfo(MesItemStockCreateRequest params) {
         MesItemStock entity = PojoUtil.copyBean(params, MesItemStock.class);
@@ -74,7 +78,16 @@ public class MesItemStockServiceImpl extends ServiceImpl<MesItemStockMapper, Mes
         this.save(entity);
     }
 
+
+    @Override
+    public List<MesItemStock> selectBoms(String startTime) {
+        // 调用 Mapper 中的 XML 方法 selectBoms
+        return stockMapper.selectBoms(startTime);
+    }
+
     ////////////////////////////////////////////////////////////////////////////新街口//////////////////////////////////////////////////////////////////////////////////
+
+
 
     /**
      * 新接口V3： 物料上传 Excel → 导入 mes_item_stock → 更新 mid_item_stock（所有在同一事务中）
