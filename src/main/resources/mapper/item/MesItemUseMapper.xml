@@ -8,6 +8,12 @@
         vari_use_assist, item_measure_assist, use_item_type, updated_by, updated_time, created_by, created_time
     </sql>
 
+    <!-- 查询指定时间后更新的父项物料编号（即 item_no） -->
+    <select id="selectNearItemNo" resultType="java.lang.String">
+        SELECT DISTINCT item_no
+        FROM mes_item_use
+        WHERE updated_time &gt;= #{startTime}
+    </select>
 
 
 

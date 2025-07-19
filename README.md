@@ -21,3 +21,13 @@
 
 - use_item_no的item_no、use_item_no 不可以重复！
 - t_bom_used的item_no、use_item_no 可以重复
+
+
+更新时间说明：
+
+- 目前更新是按MesItemStock中的修改更新的 ，如果是修改bom的话  ，MesItemStockMapper中的物料是没有更新的 ，只更新了依赖表
+
+
+bom构建的机制：
+- 目前是用料表有新增才会触发！ 
+- 我需要修改为用料表新增或者依赖表新增都会触发！
