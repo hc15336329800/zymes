@@ -229,120 +229,6 @@ public class MesToErpDataService {
 	//===================bom==================
 
 	/**
-	 * BOM 用料同步 V1.1（去重增强版）
-	 * <p>
-	 * 功能说明：
-	 * 从 ERP 表（JSPBOM）中拉取所有 BYTSTATUS=0 的 BOM 用料数据，
-	 * 然后同步到 MES 系统的 `mes_item_use` 表中。
-	 *
-	 * 处理流程：
-	 * 1. 拉取 ERP 的 BOM 数据列表；
-	 * 2. 提取所有 itemNo，批量删除 MES 表中旧的用料数据（先删后增）；
-	 * 3. 遍历 ERP BOM 数据，构建 MesItemUse 对象（保留字段信息）；
-	 *    - 特别处理：以 (itemNo + useItemNo) 为唯一键，去重重复行，防止违反唯一索引；
-	 * 4. 批量插入 mes_item_use；
-	 * 5. 回写 ERP 的同步状态（按 LNGBOMID 回写）；
-	 * 6。 保留最后一个重复项（后写覆盖前写）
-	 *
-	 * 注意：
-	 * - mes_item_use 表存在唯一索引 uq_miu_item_use(item_no, use_item_no)
-	 * - 必须对 ERP 数据中重复的 (item_no, use_item_no) 进行去重，否则报 DuplicateKeyException
-	 *
-	 * @return 同步的用料明细数量（去重后）
-	 */
-	public int syncBomTree() {
-		// 1. 拉ERP BOM用料数据
-		List<Map<String, Object>> bomList = mesToErpDataMapper.bomMessage();
-		System.out.println("ERP-BOM拉取结果：" + bomList);
-		if (bomList == null || bomList.isEmpty()) {
-			return 0;
-		}
-
-		// 记录 ERP 的 BOM 主键（用于回写状态）
-		List<Integer> bomIdList = new ArrayList<>();
-
-		// 构造插入对象的容器（去重使用）
-		Map<String, MesItemUse> dedupMap = new LinkedHashMap<>();
-		LocalDateTime now = LocalDateTime.now();
-
-		// 2. 提取所有 itemNo，准备删除旧数据
-		Set<String> itemNoSet = bomList.stream()
-				.map(row -> row.get("STRITEMCODE").toString())
-				.collect(Collectors.toSet());
-
-		if (!itemNoSet.isEmpty()) {
-			// 先批量删除旧的用料明细（按 itemNo）
-			mesItemUseService.remove(
-					new LambdaQueryWrapper<MesItemUse>().in(MesItemUse::getItemNo, itemNoSet)
-			);
-		}
-
-		// 3. 构建 MesItemUse 对象并去重（以 itemNo + useItemNo 为唯一键）
-		for (Map<String, Object> row : bomList) {
-			// 记录 ERP BOM 主键 ID
-			bomIdList.add(Integer.valueOf(row.get("LNGBOMID").toString()));
-
-			String itemNo = row.get("STRITEMCODE").toString();
-			String useItemNo = row.get("STRNEXTITEMCODE").toString();
-			String key = itemNo + "|" + useItemNo;
-
-//			if (dedupMap.containsKey(key)) {
-//				// 重复项，跳过
-//				continue;
-//			}
-
-			MesItemUse use = new MesItemUse();
-			use.setId(UUID.randomUUID().toString().replace("-", ""));
-			use.setItemNo(itemNo);
-			use.setUseItemNo(useItemNo);
-			use.setUseItemCount(new BigDecimal(row.get("DBLQUANTITY").toString()));
-			use.setFixedUse(new BigDecimal(row.get("DBLQUANTITY").toString()));
-			use.setVariUse(BigDecimal.ZERO);
-			use.setUseItemMeasure(row.get("STRNEXTITEMUNIT").toString());
-			use.setItemMeasureAssist(row.get("STRUNITNAMEAUX").toString());
-			use.setFixedUseAssist(new BigDecimal(row.get("DBLQUANTITYAUX").toString()));
-			use.setVariUseAssist(BigDecimal.ZERO);
-			use.setUseItemType("0".equals(row.get("BYTITEMSOURCE").toString()) ? "00" : "01");
-			use.setUpdatedTime(now);
-
-
-			// ✅ 如已有该 key，说明重复，将覆盖旧值，并记录日志
-			if (dedupMap.containsKey(key)) {
-				log.warn("【BOM去重】发现重复项，将覆盖旧值：{}", key);
-			}
-
-			// ✅ 保留最后一个重复项（后写覆盖前写）
-			dedupMap.put(key, use);
-		}
-
-		// 4. 去重后的用料数据列表
-		List<MesItemUse> saveList = new ArrayList<>(dedupMap.values());
-
-		if (saveList.isEmpty()) {
-			System.err.println("【警告】无有效用料明细需要同步！");
-			log.info("【警告】无有效用料明细需要同步！");
-			return 0;
-		}
-
-		// 批量插入去重后的数据
-		mesItemUseService.saveBatch(saveList);
-
-		// 5. 回写 ERP 同步状态（分批处理）
-		int batch = 1000;
-		for (int i = 0; i < bomIdList.size(); i += batch) {
-			List<Integer> subIds = bomIdList.subList(i, Math.min(i + batch, bomIdList.size()));
-			mesToErpDataMapper.bomUpdate(subIds);
-		}
-
-
-		log.info("【BOM用料同步完成】去重后同步数={}", saveList.size());
-		return saveList.size();
-	}
-
-
-
-
-	/**
 	 * bom同步 V1.0
 	 * 仅同步 ERP（JSPBOM）表 BYTSTATUS=0 的BOM用料树
 	 * JSPBOM (ERP) :   拉取 BOM 用料数据（BYTSTATUS=0）
@@ -352,74 +238,74 @@ public class MesToErpDataService {
 	 *
 	 * @return 同步数量
 	 */
-//	public int syncBomTree() {
-//		// 1. 拉ERP BOM用料
-//		List<Map<String, Object>> bomList = mesToErpDataMapper.bomMessage();
-//		System.out.println("ERP-BOM拉取结果：" + bomList);
-//		if (bomList == null || bomList.isEmpty()) {
-//			return 0;
-//		}
-//
-//		List<Integer> bomIdList = new ArrayList<>();
-//		List<MesItemUse> saveList = new ArrayList<>();
-//		LocalDateTime now = LocalDateTime.now();
-//
-//		// 新增：收集所有itemNo，批量去重
-//		Set<String> itemNoSet = bomList.stream()
-//				.map(row -> row.get("STRITEMCODE").toString())
-//				.collect(Collectors.toSet());
-//
-//		// 新增：批量删除所有itemNo的旧数据
-//		if (!itemNoSet.isEmpty()) {
-//			mesItemUseService.remove(
-//					new LambdaQueryWrapper<MesItemUse>().in(MesItemUse::getItemNo, itemNoSet)
-//			);
-//		}
-//
-//		// 原有循环无需变动
-//		for (Map<String, Object> row : bomList) {
-//			bomIdList.add(Integer.valueOf(row.get("LNGBOMID").toString()));
-//			MesItemUse use = new MesItemUse();
-//			use.setId(UUID.randomUUID().toString().replace("-", ""));
-//
-//			String itemNo = row.get("STRITEMCODE").toString();
-//			String useItemNo = row.get("STRNEXTITEMCODE").toString();
-//
-//			// 字段填充
-//			use.setItemNo(itemNo);
-//			use.setUseItemNo(useItemNo);
-//			use.setUseItemCount(new BigDecimal(row.get("DBLQUANTITY").toString()));
-//			use.setVariUse(BigDecimal.ZERO);
-//			use.setFixedUse(new BigDecimal(row.get("DBLQUANTITY").toString()));
-//			use.setUseItemMeasure(row.get("STRNEXTITEMUNIT").toString());
-//			use.setItemMeasureAssist(row.get("STRUNITNAMEAUX").toString());
-//			use.setFixedUseAssist(new BigDecimal(row.get("DBLQUANTITYAUX").toString()));
-//			use.setVariUseAssist(BigDecimal.ZERO);
-//
-//			String itemStyle = row.get("BYTITEMSOURCE").toString();
-//			use.setUseItemType(itemStyle.equals("0") ? "00" : "01");
-//			use.setUpdatedTime(now);
-//
-//			saveList.add(use);
-//		}
-//
-//		// 2. 保存到MES
-//		if (saveList.isEmpty()) {
-//			System.err.println("【警告】无有效用料明细需要同步！");
-//			log.info("【警告】无有效用料明细需要同步！");
-//			return 0;
-//		}
-//		mesItemUseService.saveBatch(saveList);
-//
-//		// 3. 分批回写ERP
-//		int batch = 1000;
-//		for (int i = 0; i < bomIdList.size(); i += batch) {
-//			List<Integer> subIds = bomIdList.subList(i, Math.min(i + batch, bomIdList.size()));
-//			mesToErpDataMapper.bomUpdate(subIds);
-//		}
-//		log.info("【警告】BOM用料同步完成，同步数={}", saveList.size());
-//		return saveList.size();
-//	}
+	public int syncBomTree() {
+		// 1. 拉ERP BOM用料
+		List<Map<String, Object>> bomList = mesToErpDataMapper.bomMessage();
+		System.out.println("ERP-BOM拉取结果：" + bomList);
+		if (bomList == null || bomList.isEmpty()) {
+			return 0;
+		}
+
+		List<Integer> bomIdList = new ArrayList<>();
+		List<MesItemUse> saveList = new ArrayList<>();
+		LocalDateTime now = LocalDateTime.now();
+
+		// 新增：收集所有itemNo，批量去重
+		Set<String> itemNoSet = bomList.stream()
+				.map(row -> row.get("STRITEMCODE").toString())
+				.collect(Collectors.toSet());
+
+		// 新增：批量删除所有itemNo的旧数据
+		if (!itemNoSet.isEmpty()) {
+			mesItemUseService.remove(
+					new LambdaQueryWrapper<MesItemUse>().in(MesItemUse::getItemNo, itemNoSet)
+			);
+		}
+
+		// 原有循环无需变动
+		for (Map<String, Object> row : bomList) {
+			bomIdList.add(Integer.valueOf(row.get("LNGBOMID").toString()));
+			MesItemUse use = new MesItemUse();
+			use.setId(UUID.randomUUID().toString().replace("-", ""));
+
+			String itemNo = row.get("STRITEMCODE").toString();
+			String useItemNo = row.get("STRNEXTITEMCODE").toString();
+
+			// 字段填充
+			use.setItemNo(itemNo);
+			use.setUseItemNo(useItemNo);
+			use.setUseItemCount(new BigDecimal(row.get("DBLQUANTITY").toString()));
+			use.setVariUse(BigDecimal.ZERO);
+			use.setFixedUse(new BigDecimal(row.get("DBLQUANTITY").toString()));
+			use.setUseItemMeasure(row.get("STRNEXTITEMUNIT").toString());
+			use.setItemMeasureAssist(row.get("STRUNITNAMEAUX").toString());
+			use.setFixedUseAssist(new BigDecimal(row.get("DBLQUANTITYAUX").toString()));
+			use.setVariUseAssist(BigDecimal.ZERO);
+
+			String itemStyle = row.get("BYTITEMSOURCE").toString();
+			use.setUseItemType(itemStyle.equals("0") ? "00" : "01");
+			use.setUpdatedTime(now);
+
+			saveList.add(use);
+		}
+
+		// 2. 保存到MES
+		if (saveList.isEmpty()) {
+			System.err.println("【警告】无有效用料明细需要同步！");
+			log.info("【警告】无有效用料明细需要同步！");
+			return 0;
+		}
+		mesItemUseService.saveBatch(saveList);
+
+		// 3. 分批回写ERP
+		int batch = 1000;
+		for (int i = 0; i < bomIdList.size(); i += batch) {
+			List<Integer> subIds = bomIdList.subList(i, Math.min(i + batch, bomIdList.size()));
+			mesToErpDataMapper.bomUpdate(subIds);
+		}
+		log.info("【警告】BOM用料同步完成，同步数={}", saveList.size());
+		return saveList.size();
+	}
 
 
 	//===================工序==================

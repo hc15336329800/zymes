@@ -63,8 +63,8 @@ public class BomUsedServiceImpl extends ServiceImpl<BomUsedMapper, BomUsed> impl
      *
      * @param startTime 查询的时间窗口起点（只处理该时间点后的变更记录）
      */
-    @Override
-    public void load(String startTime) {
+//    @Override
+    public void loadV2(String startTime) {
         // ✅ 1. 查询 mes_item_stock 表中 BOM 类型物料，作为构建入口
         //    SELECT item_no, bom_no FROM mes_item_stock WHERE updated_time >= startTime AND item_type = 'BOM'
         List<MesItemStock> stocks = stockMapper.selectBoms(startTime);
@@ -93,24 +93,60 @@ public class BomUsedServiceImpl extends ServiceImpl<BomUsedMapper, BomUsed> impl
 
 
 
-//    /**
-//     * 根据给定的起始时间，批量加载所有更新过的物料的 BOM 依赖数据  （按时间）
-//     *
-//     * @param startTime 更新查询的起始时间
-//     */
-//    @Override
-//    public void load(String startTime) {
-//        // 查询所有在 startTime 之后更新且类型为 BOM 的物料记录
-//        //   SELECT id, item_no, bom_no  构建纯树
-//        List<MesItemStock> itemList = stockMapper.selectBoms(startTime);
-//        // 遍历每个物料，加载其 BOM 依赖数据
-//        //
-//        for (MesItemStock stock : itemList) {
-//            loadBomData(stock);
-//        }
-//    }
+    /**
+     * 根据给定的起始时间，批量加载所有更新过的物料的 BOM 依赖数据  （按时间）
+     *
+     * @param startTime 更新查询的起始时间
+     */
+    @Override
+    public void load(String startTime) {
+
+        // 刷新受用料变更影响的物料更新时间  t  调试！！
+       int a  =  UpdataItemNOUpTime(startTime);
 
 
+        // 查询所有在 startTime 之后更新且类型为 BOM 的物料记录
+        //   SELECT id, item_no, bom_no  构建纯树
+        List<MesItemStock> itemList = stockMapper.selectBoms(startTime);
+        // 遍历每个物料，加载其 BOM 依赖数据
+        //
+        for (MesItemStock stock : itemList) {
+            loadBomData(stock);
+        }
+    }
+
+
+    //todo ; 增加一个方法  ：查询mes_item_stock（根据更新时间），解析出来itemno号  ，然后去更新mes_item_stock表的对应的数据的更新时间。
+
+    /**
+     * 用于刷新 mes_item_stock 表中指定时间后更新的物料的 updated_time 字段，
+     * 以确保后续 BOM 构建逻辑能正确识别这些物料作为“被动变更”的来源。
+     *
+     * 场景：用料关系发生变更时，需要手动触发这些物料的更新时间，以便纳入 BOM 重构范围。
+     *
+     * @param startTime 起始时间（只更新此时间之后变动过的物料）
+     * @return 成功更新的物料数量
+     */
+    public int UpdataItemNOUpTime(String startTime) {
+        // 查询 mes_item_use 表中指定时间后变更的父项物料编号（item_no）
+        List<String> itemNos = useMapper.selectNearItemNo(startTime);
+        if (CollectionUtils.isEmpty(itemNos)) {
+            log.info("无用料更新记录，无需刷新库存更新时间");
+            return 0;
+        }
+
+        // 构造更新时间
+        Date now = new Date();
+
+        // 调用 stockMapper 更新对应库存物料的 updated_time 字段
+        int updatedCount = stockMapper.updateItemUpdateTimeByItemNos(itemNos, now);
+
+        log.info("成功刷新 {} 条物料的更新时间（作为用料变更影响）", updatedCount);
+        return updatedCount;
+    }
+
+
+// -------------------------------------------------------------------------------------------------------------------------------------
 
     /**
      * 根据给定的起始时间，批量加载所有更新过的物料的 BOM 依赖数据  （按物料号和bom号）

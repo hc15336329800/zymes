@@ -10,6 +10,16 @@
         created_by, created_time
     </sql>
 
+    <update id="updateItemUpdateTimeByItemNos">
+        UPDATE mes_item_stock
+        SET updated_time = #{updateTime}
+        WHERE item_no IN
+        <foreach collection="itemNos" item="itemNo" open="(" separator="," close=")">
+            #{itemNo}
+        </foreach>
+    </update>
+
+
 
     <select id="pageInfo" resultType="cn.jb.boot.biz.item.vo.response.MesItemStockPageResponse">
 

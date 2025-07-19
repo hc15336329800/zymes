@@ -46,7 +46,7 @@ public class BomUsedNewUtil {
 	private static UseItemTreeResp toTree(List<BomUsed> list, String itemNo, Map<String, MesItemStock> stockMap) {
 
 		// 打印根节点匹配检查日志
-		System.out.println("根节点匹配检查: 当前itemNo=" + itemNo);
+//		System.out.println("根节点匹配检查: 当前itemNo=" + itemNo);
 
 		UseItemTreeResp resp = new UseItemTreeResp();
 		resp.setItemNo(itemNo);
@@ -72,7 +72,7 @@ public class BomUsedNewUtil {
 				continue;
 			}
 			if (itemNo.equals(bu.getParentCode())) {
-				System.out.println("匹配到子项: itemNo=" + itemNo + ", 子项=" + bu.getUseItemNo());
+//				System.out.println("匹配到子项: itemNo=" + itemNo + ", 子项=" + bu.getUseItemNo());
 				UseItemTreeResp resp = new UseItemTreeResp();
 				resp.setFixedUsed(bu.getFixedUsed());
 				resp.setUsedId(bu.getUsedId());

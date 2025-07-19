@@ -18,6 +18,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.MapKey;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +32,7 @@ import java.util.Map;
  */
 public interface MesItemStockMapper extends BaseMapper<MesItemStock> {
 
+    int updateItemUpdateTimeByItemNos(@Param("itemNos") List<String> itemNos,   @Param("updateTime") Date updateTime);
 
     IPage<MesItemStockPageResponse> pageInfo(Page<MesItemStockPageResponse> page, @Param("p") MesItemStockPageRequest p);
 

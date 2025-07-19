@@ -15,18 +15,18 @@ spring:
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #  本地环境配置  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-        db5:
-          driver-class-name: com.mysql.cj.jdbc.Driver
-          url: jdbc:mysql://localhost:3306/mes?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
-          username: root
-          password: root123456
-
-        db3:
-          driver-class-name: oracle.jdbc.driver.OracleDriver
-          url: jdbc:oracle:thin:@//127.0.0.1:1521/XEPDB1  # 注意双// 启动不了尝试去掉试试
-          username: jsp
-          password: root123456
-
+#        db5:
+#          driver-class-name: com.mysql.cj.jdbc.Driver
+#          url: jdbc:mysql://localhost:3306/mes?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
+#          username: root
+#          password: root123456
+#
+#        db3:
+#          driver-class-name: oracle.jdbc.driver.OracleDriver
+#          url: jdbc:oracle:thin:@//127.0.0.1:1521/XEPDB1  # 注意双// 启动不了尝试去掉试试
+#          username: jsp
+#          password: root123456
+#
 #
 #        db2:
 #            driver-class-name: com.mysql.cj.jdbc.Driver        # 叉车和读取erp数据库
@@ -37,24 +37,24 @@ spring:
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #  生产环境配置  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-#
-#        db5:
-#          driver-class-name: com.mysql.cj.jdbc.Driver
-#          url: jdbc:mysql://127.0.0.1:3306/mes?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
-#          username: root
-#          password: "root@zhongyu"
-#
-#        db3:
-#            driver-class-name: oracle.jdbc.driver.OracleDriver
-#            url: jdbc:oracle:thin:@127.0.0.1:1521:orcl
-#            username: system
-#            password: sys
-#
-#        db2:
-#            driver-class-name: com.mysql.cj.jdbc.Driver    # 叉车和读取erp数据库
-#            url: jdbc:mysql://182.192.0.9:3306/ego?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
-#            username: ego
-#            password: egorobotics
+
+        db5:
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://127.0.0.1:3306/mes?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
+          username: root
+          password: "root@zhongyu"
+
+        db3:
+            driver-class-name: oracle.jdbc.driver.OracleDriver
+            url: jdbc:oracle:thin:@127.0.0.1:1521:orcl
+            username: system
+            password: sys
+
+        db2:
+            driver-class-name: com.mysql.cj.jdbc.Driver    # 叉车和读取erp数据库
+            url: jdbc:mysql://182.192.0.9:3306/ego?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
+            username: ego
+            password: egorobotics
 
 
 
