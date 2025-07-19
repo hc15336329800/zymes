@@ -27,12 +27,12 @@ spring:
           username: jsp
           password: root123456
 
-#
-#        db2:
-#            driver-class-name: com.mysql.cj.jdbc.Driver        # 叉车和读取erp数据库
-#            url: jdbc:mysql://localhost:3306/ego?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
-#            username: root
-#            password: root123456
+
+        db2:
+            driver-class-name: com.mysql.cj.jdbc.Driver        # 叉车和读取erp数据库
+            url: jdbc:mysql://localhost:3306/ego?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true
+            username: root
+            password: root123456
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #  生产环境配置  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
