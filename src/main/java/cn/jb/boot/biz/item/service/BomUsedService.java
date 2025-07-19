@@ -23,6 +23,14 @@ public interface BomUsedService extends IService<BomUsed> {
 
     void load(String startTime);
 
+    /**
+     * 根据起始时间，重构 BOM 并递归更新所有父件
+     * @param startTime 更新时间
+     */
+    void loadWithParents(String startTime);
+
+
+
 
     void loadByItem(String itemNo, String bomNo);
 

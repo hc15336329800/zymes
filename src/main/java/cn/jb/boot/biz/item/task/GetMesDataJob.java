@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -78,19 +79,31 @@ public class GetMesDataJob {
 		}
 	}
 
+
+
+	public void bom(String st) {
+		long start = System.currentTimeMillis();
+		log.info("开始加载BOM用料（含递归父件）...");
+		bomUsedService.loadWithParents(st);
+		log.info("加载BOM用料完成...cost:{}ms", System.currentTimeMillis() - start);
+	}
+
+
+
+
 	/**
 	 * 内部同步bom树（按时间） --  重载
 	 * 读取：mes_item_stock, mes_item_use     删除/插入：t_bom_used
 	 */
 
-	public void bom(String st) {
-
-		long start = System.currentTimeMillis();
-		log.info("开始加载BOM用料...");
-		bomUsedService.load(st);
-		log.info("加载BOM用料完成...cost:{}", System.currentTimeMillis() - start);
-
-	}
+//	public void bom(String st) {
+//
+//		long start = System.currentTimeMillis();
+//		log.info("开始加载BOM用料...");
+//		bomUsedService.load(st);
+//		log.info("加载BOM用料完成...cost:{}", System.currentTimeMillis() - start);
+//
+//	}
 
 
 	/**

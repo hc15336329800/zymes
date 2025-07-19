@@ -72,6 +72,35 @@ public class BomUsedServiceImpl extends ServiceImpl<BomUsedMapper, BomUsed> impl
         }
     }
 
+    @Override
+    public void loadWithParents(String startTime) {
+        // 1. 先刷新那些因为用料变化而被动变更的物料更新时间
+        UpdataItemNOUpTime(startTime);
+
+        // 2. 查询所有受影响的 BOM 类型物料
+        List<MesItemStock> itemList = stockMapper.selectBoms(startTime);
+        if (CollectionUtils.isEmpty(itemList)) {
+            log.info("无 BOM 物料需更新，跳过处理");
+            return;
+        }
+
+        // 3. 对每个物料进行 BOM 重建并递归更新其母件
+        for (MesItemStock stock : itemList) {
+            try {
+                // 重构自身 BOM
+                loadBomData(stock);
+
+                // 向上递归重构所有母件
+                List<String> visited = new ArrayList<>();
+                loadParBomData(stock.getItemNo(), visited);
+
+            } catch (Exception e) {
+                log.error("处理物料 {} 时异常：{}", stock.getItemNo(), e.getMessage(), e);
+            }
+        }
+    }
+
+
 
     //todo ; 增加一个方法  ：查询mes_item_stock（根据更新时间），解析出来itemno号  ，然后去更新mes_item_stock表的对应的数据的更新时间。
 
@@ -148,6 +177,8 @@ public class BomUsedServiceImpl extends ServiceImpl<BomUsedMapper, BomUsed> impl
 
 
     //--------------------------------------------------------------------------------------------------------------
+
+
 
 
     /**
