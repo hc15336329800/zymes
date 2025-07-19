@@ -13,7 +13,7 @@ import java.math.BigDecimal;
 import java.util.*;
 
 /**
- * bom树构造器  （  将 List<BomUsed> list  + String root   构建为前端树结构）
+ * bom树构造器 （平平展树） （  将 List<BomUsed> list  + String root   构建为前端树结构）
  * 工具类（静态方法版）
  *
  * 不再使用字典表，直接查询 mes_item_stock → getByItemNos 返回 Map<itemNo, MesItemStock>。

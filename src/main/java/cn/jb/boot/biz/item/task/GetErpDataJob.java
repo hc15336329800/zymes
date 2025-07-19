@@ -122,7 +122,7 @@ public class GetErpDataJob {
 	/**
 	 * 整体MES构建方法   (2025-03 k开始构建bom ,   工序构建为最近一小时)
 	 */
-	@Scheduled(cron = "0 0/5 * * * ?")
+	@Scheduled(cron = "0 0/3 * * * ?")
 	public void syncErpToMesAll007() {
 		if (runningMes) {
 			log.warn("======【MES构建任务正在执行，跳过本次调度】======");
@@ -138,10 +138,13 @@ public class GetErpDataJob {
 		System.out.println(String.format("======【MES构建任务开始】%s======", totalStartStr));
 
 
+
 		//mes工序  （工序构建为最近一小时）
 		DateTimeFormatter onTime = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"); // 格式化模板
 		LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1); // 当前时间减去一小时
 		String processStr = oneHourAgo.format(onTime); // 得到一小时前的时间字符串
+
+		System.out.println(String.format("======【起始时间】%s======", processStr));
 
 		String st = "2025-03-05 11:50:00";  // bom重构时间
 
