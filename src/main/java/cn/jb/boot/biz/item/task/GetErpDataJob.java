@@ -149,7 +149,7 @@ public class GetErpDataJob {
 			List<Task> tasks = Arrays.asList(
 
 					new Task("MES BOM依赖", () -> {
-						getMesDataJob.bom(st);
+						getMesDataJob.bom(processStr);
 						return 0;
 					}),
 
