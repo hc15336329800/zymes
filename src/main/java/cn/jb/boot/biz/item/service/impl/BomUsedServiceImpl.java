@@ -49,49 +49,6 @@ public class BomUsedServiceImpl extends ServiceImpl<BomUsedMapper, BomUsed> impl
 
 
 
-    /**
-     * 增强版 BOM 加载器（支持双来源触发）<br/>
-     * <br/>
-     * 【触发条件】：<br/>
-     *   1. mes_item_stock 表中 BOM 类型物料新增或更新；<br/>
-     *   2. mes_item_use 表中新增/修改了用料关系（子项）时也触发；<br/>
-     * <br/>
-     * 【核心逻辑】：<br/>
-     *   - 读取最近变更的物料（含 BOM 类型库存物料和用料父项）<br/>
-     *   - 合并并去重（按 itemNo）<br/>
-     *   - 针对每个物料执行 BOM 构建（当前节点 + 向上递归父项）<br/>
-     *
-     * @param startTime 查询的时间窗口起点（只处理该时间点后的变更记录）
-     */
-//    @Override
-    public void loadV2(String startTime) {
-        // ✅ 1. 查询 mes_item_stock 表中 BOM 类型物料，作为构建入口
-        //    SELECT item_no, bom_no FROM mes_item_stock WHERE updated_time >= startTime AND item_type = 'BOM'
-        List<MesItemStock> stocks = stockMapper.selectBoms(startTime);
-
-        // ✅ 2. 查询 mes_item_use 表中最近变更的 item_no（即父项物料），用于增量识别依赖关系变动
-        List<String> itemNos = useMapper.selectNearItemNo(startTime);
-        if (!itemNos.isEmpty()) {
-            // 查询这些 itemNo 对应的 MesItemStock 信息（可能非 BOM 类型，但存在于依赖中）
-            Map<String, MesItemStock> map = stockMapper.getByItemNos(itemNos);
-            // 加入到 stocks 列表（可能会出现重复 itemNo，稍后统一去重）
-            stocks.addAll(map.values());
-        }
-
-        // ✅ 3. 按 itemNo 去重，避免重复构建同一物料（保留第一次出现的）
-        Map<String, MesItemStock> uniq = stocks.stream().collect(Collectors.toMap(
-                MesItemStock::getItemNo, s -> s, (a, b) -> a));
-
-        // ✅ 4. 遍历每个物料，执行 BOM 构建（包含向上递归）
-        for (MesItemStock stock : uniq.values()) {
-            // 构建当前物料的 BOM 树（自身依赖 + 子项结构）
-            loadBomData(stock);
-            // 构建当前物料作为子项时，其所有父项 BOM（递归构建）
-            loadParBomData(stock.getItemNo(), new ArrayList<>());
-        }
-    }
-
-
 
     /**
      * 根据给定的起始时间，批量加载所有更新过的物料的 BOM 依赖数据  （按时间）
