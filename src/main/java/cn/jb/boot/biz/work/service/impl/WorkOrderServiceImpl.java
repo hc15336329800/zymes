@@ -72,6 +72,7 @@ public class WorkOrderServiceImpl extends ServiceImpl<WorkOrderMapper, WorkOrder
     private DeviceInfoService DeviceInfoService;
 
     @Override
+    @Transactional(readOnly = true)
     public BaseResponse<List<WorkOrderPageResponse>> pageInfo(Paging page, WorkOrderPageRequest params) {
         PageUtil<WorkOrderPageResponse, WorkOrderPageRequest> pu = (p, q) -> mapper.pageInfo(p, q);
         return pu.page(page, params);

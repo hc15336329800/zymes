@@ -35,8 +35,9 @@ public class WorkOrderPageRequest implements Serializable {
     private List<String> procedureNames;
 
     //手机端使用 250713 start
-    @Schema(description ="工名称")
+    private String bomNo;
     private String procedureName;
+    /////////////////////////////////////////////
 
 
     @Schema(description = "工单号")

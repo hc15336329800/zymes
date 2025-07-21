@@ -57,9 +57,9 @@
             and two.item_no=#{p.itemNo}
         </if>
 
-#         根据题号查询 start
+        <!-- 根据题号查询 start -->
         <if test="p.bomNo != null and p.bomNo != '' ">
-        and mis.bom_no like concat('%',#{p.bomNo},'%')
+        and two.bom_no like concat('%',#{p.bomNo},'%')
         </if>
 
         <if test="p.status != null and p.status == '01'">
@@ -69,7 +69,8 @@
             and two.plan_total_count = two.real_count
         </if>
 
-#         手机端使用 0718 stari
+
+        <!-- 手机端使用 0718 stari -->
         <if test="p.procedureName != null and p.procedureName != '' ">
           and two.procedure_name like concat('%',#{p.procedureName} ,'%' )
         </if>
