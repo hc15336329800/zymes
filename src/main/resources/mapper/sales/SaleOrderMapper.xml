@@ -100,6 +100,7 @@
         ) ps ON ps.sale_id = o.id
         LEFT JOIN mes_item_stock mis ON mis.item_no = o.item_no
         <where>
+            o.order_status = '00'
             <if test='p.orderNo != null and p.orderNo !=""'>
                 AND o.order_no LIKE CONCAT("%", #{p.orderNo}, "%")
             </if>

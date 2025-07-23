@@ -51,7 +51,7 @@ public class MesApplication extends SpringBootServletInitializer implements Comm
     @Override
     public void run(String... args) throws Exception {
 //        String url = "jdbc:oracle:thin:@127.0.0.1:1521:orcl";  错误写法
-        String url = "jdbc:oracle:thin:@//127.0.0.1:1521/ORCL";
+        String url = "jdbc:oracle:thin:@//127.0.0.1:1521/XEPDB1";
         String username = "system";
         String password = "sys";
         String tableName = "JSP.JSPBOM";  // 要检查的表名
@@ -121,7 +121,7 @@ public class MesApplication extends SpringBootServletInitializer implements Comm
 
     // 获取表记录数（符合 BYTSTATUS = 1 条件）
     private static void getTableRecordCount(java.sql.Connection conn, String tableName) {
-        String sql = "SELECT COUNT(*) FROM " + tableName + " WHERE BYTSTATUS = 1";
+        String sql = "SELECT COUNT(*) FROM " + tableName + " WHERE BYTSTATUS = 0";
         try (java.sql.Statement stmt = conn.createStatement();
              java.sql.ResultSet rs = stmt.executeQuery(sql)) {
             if (rs.next()) {

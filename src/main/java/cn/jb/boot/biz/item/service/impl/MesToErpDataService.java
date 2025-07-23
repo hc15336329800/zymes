@@ -262,14 +262,27 @@ public class MesToErpDataService {
 			);
 		}
 
+
+		// 新增一个 Set 用于去重
+		Set<String> uniqueKeySet = new HashSet<>();
+
+
 		// 原有循环无需变动
 		for (Map<String, Object> row : bomList) {
+
+			String itemNo = row.get("STRITEMCODE").toString();
+			String useItemNo = row.get("STRNEXTITEMCODE").toString();
+			String uniqueKey = itemNo + "#" + useItemNo;
+			// 新增：去重逻辑
+			if (uniqueKeySet.contains(uniqueKey)) continue;
+			uniqueKeySet.add(uniqueKey);
+
+
 			bomIdList.add(Integer.valueOf(row.get("LNGBOMID").toString()));
 			MesItemUse use = new MesItemUse();
 			use.setId(UUID.randomUUID().toString().replace("-", ""));
 
-			String itemNo = row.get("STRITEMCODE").toString();
-			String useItemNo = row.get("STRNEXTITEMCODE").toString();
+
 
 			// 字段填充
 			use.setItemNo(itemNo);
