@@ -42,9 +42,8 @@ public class WorkOrderPageRequest implements Serializable {
 
     @Schema(description = "工单号")
     private String workOrderNo;
-
-    @Schema(description = "就绪 和已下达 ")
-    private String state;
+    @Schema(description = "status")
+    private String status;
 
 
 }

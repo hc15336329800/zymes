@@ -59,7 +59,7 @@
 
         <!-- 根据题号查询 start -->
         <if test="p.bomNo != null and p.bomNo != '' ">
-            and two.bom_no like concat('%',#{p.bomNo},'%')
+        and two.bom_no like concat('%',#{p.bomNo},'%')
         </if>
 
         <if test="p.status != null and p.status == '01'">
@@ -72,7 +72,7 @@
 
         <!-- 手机端使用 0718 stari -->
         <if test="p.procedureName != null and p.procedureName != '' ">
-            and two.procedure_name like concat('%',#{p.procedureName} ,'%' )
+          and two.procedure_name like concat('%',#{p.procedureName} ,'%' )
         </if>
 
 
@@ -82,7 +82,6 @@
                 #{name}
             </foreach>
         </if>
-
         <!-- ★★★ 数据权限：只看自己所在分组的工单 -->
         <if test="p.userId != null and p.userId != ''">
             and exists (
@@ -92,12 +91,6 @@
             and g.user_id = #{p.userId}
             )
         </if>
-
-        <!-- 新增：根据 state 字段筛选工单状态 -->
-        <if test="p.state != null and p.state != ''">
-            and two.state = #{p.state}
-        </if>
-
         order by two.created_time desc
     </select>
 
