@@ -29,8 +29,8 @@ public class OrderProgressSummary extends BaseEntity {
 	@TableField("cust_name")
 	private String custName;
 
-	@TableField("created_time")
-	private LocalDateTime createdTime;
+//	@TableField("created_time")
+//	private LocalDateTime createdTime;
 
 	@TableField("need_num")
 	private BigDecimal needNum;
@@ -46,7 +46,7 @@ public class OrderProgressSummary extends BaseEntity {
 
 	@TableField("progress_percent")
 	private BigDecimal progressPercent;
-
-	@TableField("update_time")
-	private LocalDateTime updateTime;
+//
+//	@TableField("update_time")
+//	private LocalDateTime updateTime;
 }

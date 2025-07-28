@@ -24,6 +24,12 @@
 - t_bom_used的item_no、use_item_no 可以重复
 
 
+- 新建的数据表要注意！！  
+   实体类继承了 BaseEntity，而 BaseEntity 中定义了 createdBy、updatedBy、updatedTime 等字段，会自动映射到数据库字段 created_by、updated_by、updated_time。
+   如果你提供的表  中只有 created_time 和 update_time，并没有 created_by、updated_by、updated_time 这些列。
+   MyBatis-Plus 在执行 mapper.selectList(queryWrapper) 时会根据实体类生成 SQL，结果会包含这些不存在的字段，导致数据库报 “Unknown column …” 的错误。因此字段与数据库表结构不一致是造成报错的主要原因。
+
+
 更新时间说明：
 
 2025-07-08: 

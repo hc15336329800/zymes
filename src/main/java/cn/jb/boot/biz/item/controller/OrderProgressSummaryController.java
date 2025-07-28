@@ -33,11 +33,5 @@ public class OrderProgressSummaryController {
 		return MsgUtil.ok(data);
 	}
 
-	@PostMapping("/listcs")
-	@Operation(summary = "查询订单进度汇总列表（最多100条）")
-	public BaseResponse<List<OrderProgressSummary>> listcs() {
-		List<OrderProgressSummary> data =null;
-		return MsgUtil.ok(data);
-	}
 
 }
