@@ -18,8 +18,17 @@ public class OrderProgressSummaryServiceImpl implements OrderProgressSummaryServ
 
 	@Override
 	public List<OrderProgressSummary> listTop100() {
-		// 直接使用 MyBatis-Plus 查询，并限制返回 100 条
-		return mapper.selectList(
-				new LambdaQueryWrapper<OrderProgressSummary>().last("limit 100"));
+		// 构造查询条件，限制返回 100 条记录
+		LambdaQueryWrapper<OrderProgressSummary> queryWrapper = new LambdaQueryWrapper<>();
+		queryWrapper.last("limit 100");
+
+		// 执行查询
+		List<OrderProgressSummary> resultList = mapper.selectList(queryWrapper);
+
+		// 打印结果大小（或调试时查看是否为 null）
+		System.out.println("OrderProgressSummary 查询结果数量：" + (resultList == null ? "null" : resultList.size()));
+
+		// 返回结果
+		return resultList;
 	}
 }

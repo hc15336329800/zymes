@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @TableName("t_order_progress_summary")
 public class OrderProgressSummary extends BaseEntity {
 
-	@TableId(type = IdType.ASSIGN_ID)
+	@TableId(type = IdType.AUTO)
 	private String id;
 
 	@TableField("order_no")
