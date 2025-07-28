@@ -1,0 +1,76 @@
+CREATE PROCEDURE refresh_order_progress()
+BEGIN
+    -- 清空旧数据
+    TRUNCATE TABLE t_order_progress_summary;
+    
+    -- 插入新数据
+    INSERT INTO t_order_progress_summary (
+        order_no, item_name, cust_name, created_time, 
+        need_num, bom_no, total_hours, done_hours, progress_percent
+    )
+    WITH 
+    cte AS (
+      SELECT
+        tod.order_no AS order_no,
+        po.item_no   AS item_no,
+        mis.bom_no   AS bom_no,
+        mis.item_name AS item_name,
+        so.created_time AS created_time,
+        so.cust_name AS cust_name,
+        so.need_num AS need_num,
+        ROW_NUMBER() OVER (PARTITION BY tod.order_no ORDER BY po.item_no) AS rn
+      FROM t_order_dtl tod
+      JOIN t_work_order two ON two.order_dtl_id = tod.id
+      JOIN t_production_order po ON po.sales_order_no = tod.order_no
+      JOIN mes_item_stock mis ON mis.item_no = po.item_no
+      LEFT JOIN t_sale_order so ON so.order_no = tod.order_no
+      WHERE tod.order_dtl_status IN ('03', '08', '09')
+        AND EXISTS (SELECT 1 FROM t_work_report twr 
+                   WHERE twr.work_order_id = two.id AND twr.status = '03')
+    ),
+    params AS (
+      SELECT * FROM cte WHERE rn = 1
+    ),
+    order_total AS (
+      SELECT
+        p.order_no,
+        p.item_no,
+        p.bom_no,
+        SUM(mp.hours_work) AS orderTotalHours
+      FROM params p
+      JOIN t_bom_used tbu ON tbu.item_no = p.item_no
+      JOIN mes_procedure mp ON mp.item_no = tbu.use_item_no
+      GROUP BY p.order_no, p.item_no, p.bom_no
+    ),
+    order_done AS (
+      SELECT
+        p.order_no,
+        p.item_no,
+        p.bom_no,
+        SUM(mp2.hours_work) AS orderDoneHours
+      FROM params p
+      JOIN t_bom_used tbu ON tbu.item_no = p.item_no
+      JOIN t_work_order two ON two.item_no = tbu.use_item_no
+      JOIN t_order_dtl tod ON tod.id = two.order_dtl_id AND tod.order_no = p.order_no
+      JOIN t_work_report twr ON twr.work_order_id = two.id AND twr.status = '03'
+      JOIN mes_procedure mp2 ON mp2.item_no = two.item_no AND mp2.procedure_code = two.procedure_code
+      WHERE tod.order_dtl_status IN ('03','08','09')
+      GROUP BY p.order_no, p.item_no, p.bom_no
+    )
+    SELECT
+      ot.order_no,
+      p.item_name,
+      p.cust_name,
+      p.created_time,
+      p.need_num,
+      ot.bom_no,
+      ot.orderTotalHours,
+      COALESCE(od.orderDoneHours, 0),
+      ROUND(COALESCE(od.orderDoneHours, 0) / NULLIF(ot.orderTotalHours, 0) * 100, 2)
+    FROM order_total ot
+    LEFT JOIN order_done od ON od.order_no = ot.order_no AND od.item_no = ot.item_no AND od.bom_no = ot.bom_no
+    JOIN params p ON p.order_no = ot.order_no AND p.item_no = ot.item_no AND p.bom_no = ot.bom_no;
+    
+    -- 返回操作结果
+    SELECT CONCAT('数据已刷新，共插入 ', ROW_COUNT(), ' 条记录') AS result;
+END;
