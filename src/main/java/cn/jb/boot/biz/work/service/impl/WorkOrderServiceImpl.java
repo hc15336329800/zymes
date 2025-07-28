@@ -12,6 +12,7 @@ import cn.jb.boot.biz.tray.mapper.TrayManageInfoMapper;
 import cn.jb.boot.biz.work.entity.WorkAssign;
 import cn.jb.boot.biz.work.entity.WorkOrder;
 import cn.jb.boot.biz.work.entity.WorkReport;
+import cn.jb.boot.biz.work.enums.ReportStatus;
 import cn.jb.boot.biz.work.enums.ReportTypeEnum;
 import cn.jb.boot.biz.work.mapper.WorkOrderMapper;
 import cn.jb.boot.biz.work.service.WorkAssignService;
@@ -357,7 +358,22 @@ public class WorkOrderServiceImpl extends ServiceImpl<WorkOrderMapper, WorkOrder
                     continue;
                 }
 
-                // 新增校验：如果工单已有待验收正品数量，则直接跳过本次报工
+
+                // 校验是否已有待审核或待验收的报工记录  -- 重点
+                long pending = workReportService.count(
+                        new LambdaQueryWrapper<WorkReport>()
+                                .eq(WorkReport::getWorkOrderId, workOrderId)
+                                .in(WorkReport::getStatus,
+                                        ReportStatus.TO_CHECK.getCode(),
+                                        ReportStatus.TO_REVIEW.getCode())
+                );
+                if (pending > 0) {
+                    failedWorkOrderNos.add(wo.getWorkOrderNo() + " 已有报工待审核，禁止重复提交");
+                    continue;
+                }
+
+
+                // 校验：如果工单已有待验收正品数量，则直接跳过本次报工
                 if (wo.getToReviewRealCount().compareTo(BigDecimal.ZERO) > 0) {
                     log.info("工单 {} 已存在待验收正品数量 {}，跳过报工", wo.getWorkOrderNo(), wo.getToReviewRealCount());
                     continue;
@@ -366,6 +382,13 @@ public class WorkOrderServiceImpl extends ServiceImpl<WorkOrderMapper, WorkOrder
                 // 更新待验收数量
                 wo.setToReviewDeffCount(wo.getToReviewDeffCount().add(params.getDeffCount()));
                 wo.setToReviewRealCount(wo.getToReviewRealCount().add(params.getRealCount()));
+
+
+//                // 更新待验收数量，批量报工默认以已下达数量为正品数
+//                BigDecimal assignCount = wo.getAssignCount();
+//                wo.setToReviewDeffCount(wo.getToReviewDeffCount().add(params.getDeffCount()));
+//                wo.setToReviewRealCount(wo.getToReviewRealCount().add(assignCount));
+
 
                 // 校验：待验收正品 <= 下达数量
                 if (wo.getToReviewRealCount().compareTo(wo.getAssignCount()) > 0) {
@@ -382,11 +405,16 @@ public class WorkOrderServiceImpl extends ServiceImpl<WorkOrderMapper, WorkOrder
                     throw new CavException("工单【" + wo.getWorkOrderNo() + "】报工数量超过下达数量");
                 }
 
+
+
                 // 更新工单信息
                 this.updateById(wo);
 
+
+
                 // 构建报工记录并保存
                 WorkReport workReport = PojoUtil.copyBean(params, WorkReport.class);
+                workReport.setRealCount(params.getRealCount() );          // 使用已下达数量
                 workReport.setStatus(Constants.STATUS_00); // 待审核状态
                 workReportService.save(workReport);
 
