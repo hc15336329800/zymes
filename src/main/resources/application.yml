@@ -59,7 +59,7 @@ jbtcl:
         - /api/device/device_info/deviceType_count
         - /api/test/**
         - /api/salesOrder/**    #订单放行测试
-        - /api/item/order_progress_summary/list
+        - /api/item/orderProgressSummary/**
     ding-talk:
       app-key: ding47bek4nvio0wbqpx
       app-secret: a5_1eefxgKl2HhDLk8IBBZ5bvuGTPt-LsJEx3EbqRKNWNHYYAY7FcB6ID7OZfpc3
