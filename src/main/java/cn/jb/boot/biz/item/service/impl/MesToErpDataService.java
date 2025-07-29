@@ -366,6 +366,8 @@ public class MesToErpDataService {
 		Set<String> erpItemNos = new HashSet<>();
 		for (Map<String, Object> erpItem : erpRouterList) {
 			String bomNo = erpItem.get("STRBOMCODE").toString();
+
+			// 验证是否有物料bom!
 			MesItemStock stock = bomToStock.get(bomNo);
 			if (stock != null && StringUtils.isNotEmpty(stock.getItemNo())) {
 				erpItemNos.add(stock.getItemNo());
@@ -398,6 +400,8 @@ public class MesToErpDataService {
 			MesItemStock stock = bomToStock.get(bomNo);
 
 			// 4.1 跳过无效BOM
+			// 判定逻辑： 1、ERP 发过来的 BOM 编码在 MES 中根本找不到对应物料。 2、虽然找到了 MesItemStock 对象，但其 itemNo 字段是 null 或 ""。
+
 			if (stock == null || StringUtils.isEmpty(stock.getItemNo())) {
 				log.warn("[工序同步] 跳过无效BOM: {}", bomNo);
 				continue;
