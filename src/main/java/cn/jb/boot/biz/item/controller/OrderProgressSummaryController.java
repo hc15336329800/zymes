@@ -1,10 +1,14 @@
 package cn.jb.boot.biz.item.controller;
 
+import cn.jb.boot.biz.item.dto.LaserReportSummarySto;
 import cn.jb.boot.biz.item.dto.OrderProgressSummaryResponse;
+import cn.jb.boot.biz.item.entity.LaserReportSummary;
 import cn.jb.boot.biz.item.entity.OrderProgressSummary;
+import cn.jb.boot.biz.item.service.LaserReportSummaryService;
 import cn.jb.boot.biz.item.service.OrderProgressSummaryService;
 import cn.jb.boot.framework.com.response.BaseResponse;
 import cn.jb.boot.util.MsgUtil;
+import cn.jb.boot.util.PojoUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,7 +19,6 @@ import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import cn.jb.boot.util.PojoUtil;
 
 /**
  * 查询订单进度汇总的控制器
@@ -29,8 +32,13 @@ public class OrderProgressSummaryController {
 	private OrderProgressSummaryService service;
 
 
+
+	@Resource
+	private LaserReportSummaryService laserService;
+
+
 	/**
-	 * 获取 t_order_progress_summary 表前 100 条记录  DTO
+	 * 查询订单进度汇总列表（最多100条）
 	 */
 	@PostMapping("/list")
 	@Operation(summary = "查询订单进度汇总列表（最多100条）")
@@ -42,6 +50,23 @@ public class OrderProgressSummaryController {
 	}
 
 
+
+
+	/** 查询激光报工汇总列表（最多100条） */
+	@PostMapping("/jglist")
+	@Operation(summary = "查询激光报工汇总列表（最多100条）")
+	public BaseResponse<List<LaserReportSummarySto>> laserList() {
+		List<LaserReportSummary> list = laserService.listTop100();
+		List<LaserReportSummarySto> respList =
+				PojoUtil.copyList(list, LaserReportSummarySto.class);
+		return MsgUtil.ok(respList);
+	}
+
+
+
+
+
+	//	模拟数据
 	@PostMapping("/lists")
 	@Operation(summary = "查询订单进度汇总列表（最多100条）")
 	public BaseResponse<List<OrderProgressSummaryResponse>> lists() {
@@ -74,7 +99,6 @@ public class OrderProgressSummaryController {
 
 		return MsgUtil.ok(respList);
 	}
-
 
 
 }
