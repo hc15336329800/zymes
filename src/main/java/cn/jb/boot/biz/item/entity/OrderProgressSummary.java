@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /** 订单进度汇总表实体 */
@@ -28,6 +29,11 @@ public class OrderProgressSummary extends BaseEntity {
 
 	@TableField("cust_name")
 	private String custName;
+
+
+
+	@TableField("deliver_time")
+	private LocalDateTime deliverTime;
 
 //	@TableField("created_time")
 //	private LocalDateTime createdTime;

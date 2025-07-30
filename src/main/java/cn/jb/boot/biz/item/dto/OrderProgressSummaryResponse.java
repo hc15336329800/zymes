@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -33,6 +34,8 @@ public class OrderProgressSummaryResponse implements Serializable {
 	@Schema(description = "需求数量")
 	private BigDecimal needNum;
 
+	@Schema(description = "交期时间")
+	private LocalDateTime deliverTime;
 
 //	@Schema(description = "总工时")
 //	private BigDecimal totalHours;
@@ -48,4 +51,7 @@ public class OrderProgressSummaryResponse implements Serializable {
 
 	@Schema(description = "更新时间")
 	private LocalDateTime updateTime;
+
+
+
 }
