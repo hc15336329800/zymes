@@ -60,4 +60,8 @@ public class LaserReportSummary extends BaseEntity {
 	@Schema(description = "最近报工时间")
 	@TableField("last_report_time")
 	private LocalDateTime lastReportTime;
+
+	@Schema(description = "最近报工时间")
+	@TableField("deliver_time")
+	private LocalDateTime deliverTime;
 }
