@@ -41,8 +41,6 @@ public class LaserReportSummarySto {
 	@Schema(description = "最近报工时间")
 	private LocalDateTime lastReportTime;
 
-	@Schema(description = "计划交期")
-	private LocalDateTime deliverTime;
 
 
 }
