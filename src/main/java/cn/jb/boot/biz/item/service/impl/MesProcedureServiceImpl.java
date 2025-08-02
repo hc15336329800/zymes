@@ -88,8 +88,41 @@ public class MesProcedureServiceImpl extends ServiceImpl<MesProcedureMapper, Mes
     public MesProcedureImportResult upload(HttpServletRequest request) {
         // === 新增：返回结构体，包含成功失败汇总 ===
         MesProcedureImportResult result = new MesProcedureImportResult();
-
         MultipartFile file = FileUtil.getFile(request);
+
+        // === 新增：必须字段检查 ===
+        try {
+            // 定义必须字段列表
+            String[] requiredFields = {"母件BOM", "序号", "工序编码", "工序名称", "工作车间", "定额工时", "加工工时"};
+
+            // 检查Excel是否包含所有必须字段
+            List<List<String>> headList = EasyExcel.read(file.getInputStream()).sheet().doReadSync().get(0);
+            Set<String> existingHeaders = headList.stream()
+                    .flatMap(List::stream)
+                    .collect(Collectors.toSet());
+
+            // 检查缺失的必须字段
+            List<String> missingFields = Arrays.stream(requiredFields)
+                    .filter(field -> !existingHeaders.contains(field))
+                    .collect(Collectors.toList());
+
+            if (!missingFields.isEmpty()) {
+                MesProcedureImportResult.FailDetail fail = new MesProcedureImportResult.FailDetail();
+                fail.setRowNum(0);
+                fail.setReason("导入失败：文件缺少必须字段 - " + String.join(", ", missingFields));
+                result.getFailList().add(fail);
+                result.setFailCount(1);
+                return result;
+            }
+        } catch (Exception e) {
+            MesProcedureImportResult.FailDetail fail = new MesProcedureImportResult.FailDetail();
+            fail.setRowNum(0);
+            fail.setReason("导入失败：文件头读取异常 - " + e.getMessage());
+            result.getFailList().add(fail);
+            result.setFailCount(1);
+            return result;
+        }
+
         List<MesProcedureUploadResponse> list = EasyExcelUtil.importExcel(file, MesProcedureUploadResponse.class);
 
         if (CollectionUtils.isEmpty(list)) {
