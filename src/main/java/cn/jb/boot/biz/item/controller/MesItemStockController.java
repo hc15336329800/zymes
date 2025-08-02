@@ -1,17 +1,12 @@
 package cn.jb.boot.biz.item.controller;
 
 import cn.jb.boot.biz.item.service.impl.MesItemStockServiceImpl;
-import cn.jb.boot.biz.item.vo.request.BomNoSelectedRequest;
-import cn.jb.boot.biz.item.vo.request.BomPageRequest;
-import cn.jb.boot.biz.item.vo.request.ItemNoSelectedRequest;
+import cn.jb.boot.biz.item.vo.request.*;
 import cn.jb.boot.biz.item.vo.response.ItemSelectedResponse;
 import cn.jb.boot.framework.com.entity.ComId;
 import cn.jb.boot.framework.com.request.BaseRequest;
 import cn.jb.boot.framework.com.response.BaseResponse;
 import cn.jb.boot.biz.item.service.MesItemStockService;
-import cn.jb.boot.biz.item.vo.request.MesItemStockCreateRequest;
-import cn.jb.boot.biz.item.vo.request.MesItemStockPageRequest;
-import cn.jb.boot.biz.item.vo.request.MesItemStockUpdateRequest;
 import cn.jb.boot.biz.item.vo.response.MesItemStockInfoResponse;
 import cn.jb.boot.biz.item.vo.response.MesItemStockPageResponse;
 import cn.jb.boot.framework.common.core.domain.AjaxResult;
@@ -61,14 +56,13 @@ public class MesItemStockController {
     public AjaxResult uploadNew(HttpServletRequest request) {
 
         try {
-            stockService.uploadNew(request);
-            return AjaxResult.success("物料导入并初始化库存成功");
+            ImportResult result = stockService.uploadNew(request);
+            return AjaxResult.success("物料导入并初始化库存成功", result);
         } catch (ServiceException e) {
             return AjaxResult.error(e.getMessage());
-        } catch (Exception e) {
-//            log.error("物料导入失败", e);
-            return AjaxResult.error("系统异常，请稍后重试");
         }
+
+
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

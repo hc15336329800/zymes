@@ -3,9 +3,7 @@ package cn.jb.boot.biz.item.service.impl;
 import cn.jb.boot.biz.item.entity.MidItemStock;
 import cn.jb.boot.biz.item.enums.StockType;
 import cn.jb.boot.biz.item.service.MidItemStockService;
-import cn.jb.boot.biz.item.vo.request.BomNoSelectedRequest;
-import cn.jb.boot.biz.item.vo.request.BomPageRequest;
-import cn.jb.boot.biz.item.vo.request.ItemNoSelectedRequest;
+import cn.jb.boot.biz.item.vo.request.*;
 import cn.jb.boot.biz.item.vo.response.ItemSelectedResponse;
 import cn.jb.boot.framework.com.DictType;
 import cn.jb.boot.framework.com.request.Paging;
@@ -17,10 +15,6 @@ import cn.jb.boot.biz.item.entity.MesItemStock;
 import cn.jb.boot.biz.item.enums.ItemType;
 import cn.jb.boot.biz.item.mapper.MesItemStockMapper;
 import cn.jb.boot.biz.item.service.MesItemStockService;
-import cn.jb.boot.biz.item.vo.request.MesItemStockCreateRequest;
-import cn.jb.boot.biz.item.vo.request.MesItemStockPageRequest;
-import cn.jb.boot.biz.item.vo.request.MesItemStockUpdateRequest;
-import cn.jb.boot.biz.item.vo.request.MesItemUploadRequest;
 import cn.jb.boot.biz.item.vo.response.MesItemStockInfoResponse;
 import cn.jb.boot.biz.item.vo.response.MesItemStockPageResponse;
 import cn.jb.boot.system.vo.DictDataVo;
@@ -76,12 +70,160 @@ public class MesItemStockServiceImpl extends ServiceImpl<MesItemStockMapper, Mes
 
     ////////////////////////////////////////////////////////////////////////////新街口//////////////////////////////////////////////////////////////////////////////////
 
+
+    @Transactional(rollbackFor = Throwable.class)
+    public ImportResult uploadNew(HttpServletRequest request) {
+        ImportResult result = new ImportResult();
+
+        try {
+            // 1. 取文件 & 校验表头
+            MultipartFile file = FileUtil.getFile(request);
+
+            // 模板格式检查
+            List<String> expected = Arrays.asList("图纸号", "物品编码", "数量");
+            List<String> actual = EasyExcelUtil.readHead(file);
+
+            if (!actual.containsAll(expected)) {
+                ImportResult.FailItem failItem = new ImportResult.FailItem();
+                failItem.setReason("导入失败：请使用最新模板，确保包含图纸号、物品编码、数量三列");
+                result.getFailList().add(failItem);
+                return result;
+            }
+
+            // 2. 读 Excel VO
+            List<MesItemUploadRequest> list = EasyExcelUtil.importExcel(file, MesItemUploadRequest.class);
+            if (CollectionUtils.isEmpty(list)) {
+                ImportResult.FailItem failItem = new ImportResult.FailItem();
+                failItem.setReason("导入失败：文件中无数据");
+                result.getFailList().add(failItem);
+                return result;
+            }
+
+            // 3. 准备库位映射
+            Map<String,String> locMap = DictUtil.getDictCache(DictType.WARE_HOUSE)
+                    .stream().collect(Collectors.toMap(d->d.getDictLabel(), d->d.getDictValue(), (a,b)->a));
+
+            // 4. 处理数据并记录结果
+            Map<String, MesItemStock> unique = new LinkedHashMap<>();
+            for (MesItemUploadRequest r : list) {
+                String itemNo = StringUtils.trimToEmpty(r.getItemNo());
+                if (itemNo.isEmpty()) {
+                    ImportResult.FailItem failItem = new ImportResult.FailItem();
+                    failItem.setItemNo("N/A");
+                    failItem.setReason("物料编码为空");
+                    result.getFailList().add(failItem);
+                    continue;
+                }
+
+                try {
+                    // 构造 MesItemStock 对象
+                    MesItemStock mis = new MesItemStock();
+                    mis.setItemNo(itemNo);
+                    mis.setItemName(r.getItemName());
+                    mis.setItemCount(r.getItemCount());
+                    mis.setItemMeasure(r.getItemMeasure());
+                    mis.setItemOrigin(r.getItemOrigin());
+                    mis.setItemModel(r.getItemModel());
+
+                    // 设置 itemType 和 bomNo
+                    String bomNo = StringUtils.trimToEmpty(r.getBomNo());
+                    mis.setBomNo(bomNo);
+                    if (StringUtils.isNotBlank(bomNo)) {
+                        mis.setItemType("01");   // 半成品
+                    } else {
+                        mis.setItemType("00");   // 原料
+                    }
+
+                    // 库位映射
+                    mis.setLocation(locMap.getOrDefault(r.getLocation(), ""));
+
+                    unique.put(itemNo, mis);
+                    result.getSuccessList().add(itemNo);
+                } catch (Exception e) {
+                    ImportResult.FailItem failItem = new ImportResult.FailItem();
+                    failItem.setItemNo(itemNo);
+                    failItem.setReason("数据处理失败: " + e.getMessage());
+                    result.getFailList().add(failItem);
+                }
+            }
+
+            List<MesItemStock> toAdd = new ArrayList<>(unique.values());
+            if (toAdd.isEmpty()) {
+                ImportResult.FailItem failItem = new ImportResult.FailItem();
+                failItem.setReason("导入失败：无有效新物料");
+                result.getFailList().add(failItem);
+                return result;
+            }
+
+            // 5. 删除旧数据
+            List<String> itemNos = toAdd.stream()
+                    .map(MesItemStock::getItemNo)
+                    .filter(StringUtils::isNotBlank)
+                    .distinct()
+                    .collect(Collectors.toList());
+            List<String> bomNos = toAdd.stream()
+                    .map(MesItemStock::getBomNo)
+                    .filter(StringUtils::isNotBlank)
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            if (!itemNos.isEmpty() || !bomNos.isEmpty()) {
+                LambdaQueryWrapper<MesItemStock> delWrapper = new LambdaQueryWrapper<>();
+                delWrapper.nested(w -> {
+                    if (!itemNos.isEmpty()) {
+                        w.in(MesItemStock::getItemNo, itemNos);
+                    }
+                    if (!bomNos.isEmpty()) {
+                        if (!itemNos.isEmpty()) {
+                            w.or();
+                        }
+                        w.in(MesItemStock::getBomNo, bomNos);
+                    }
+                });
+                this.remove(delWrapper);
+            }
+
+            // 6. 写入新数据
+            this.saveBatch(toAdd);
+
+            // 7. 更新中间件库存
+            List<String> bomItemNos = toAdd.stream()
+                    .filter(mis -> "01".equals(mis.getItemType()))
+                    .map(MesItemStock::getItemNo)
+                    .collect(Collectors.toList());
+
+            if (!bomItemNos.isEmpty()) {
+                Map<String, MidItemStock> midMap = midItemStockService.selectStock(bomItemNos);
+                for (MesItemStock mis : toAdd) {
+                    if (!"01".equals(mis.getItemType())) continue;
+                    MidItemStock mid = midMap.get(mis.getItemNo());
+                    if (mid == null) {
+                        ImportResult.FailItem failItem = new ImportResult.FailItem();
+                        failItem.setItemNo(mis.getItemNo());
+                        failItem.setReason("中间库存表不存在该BOM");
+                        result.getFailList().add(failItem);
+                        continue;
+                    }
+                    mid.setInitialCount(mis.getItemCount());
+                    midItemStockService.updateById(mid);
+                }
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            ImportResult.FailItem failItem = new ImportResult.FailItem();
+            failItem.setReason("系统异常: " + e.getMessage());
+            result.getFailList().add(failItem);
+            return result;
+        }
+    }
     /**
      * 新接口V3： 物料上传 Excel → 导入 mes_item_stock → 更新 mid_item_stock（所有在同一事务中）
      * 修复第7步
      */
     @Transactional(rollbackFor = Throwable.class)
-    public void uploadNew(HttpServletRequest request) {
+    public void uploadNewV3(HttpServletRequest request) {
         // 1. 取文件 & 校验表头
         // 1. 取文件 & 读取字典（库位映射）
         MultipartFile file = FileUtil.getFile(request);
