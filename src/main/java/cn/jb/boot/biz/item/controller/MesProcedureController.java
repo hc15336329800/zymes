@@ -145,8 +145,9 @@ public class MesProcedureController {
     @Operation(summary = "工序导入")
     public BaseResponse<MesProcedureImportResult> upload(HttpServletRequest request) {
         MesProcedureImportResult result = service.upload(request);
-        return BaseResponse.ok(result);
+        return MsgUtil.ok(result);
     }
+
 
 
     /**
