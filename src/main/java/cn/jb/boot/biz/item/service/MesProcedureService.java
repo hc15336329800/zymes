@@ -1,5 +1,6 @@
 package cn.jb.boot.biz.item.service;
 
+import cn.jb.boot.biz.item.dto.MesProcedureImportResult;
 import cn.jb.boot.biz.item.entity.MesProcedure;
 import cn.jb.boot.biz.item.vo.request.ItemNoRequest;
 import cn.jb.boot.biz.item.vo.request.ItemProcedureRequest;
@@ -36,7 +37,7 @@ public interface MesProcedureService extends IService<MesProcedure> {
 
     List<MesProcedureInfoResponse> listByItem(ItemNoRequest request);
 
-    void upload(HttpServletRequest request);
+    MesProcedureImportResult upload(HttpServletRequest request);
 
     void createInfo(MesProcedureCreateRequest params);
 
