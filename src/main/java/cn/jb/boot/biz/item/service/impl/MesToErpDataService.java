@@ -79,106 +79,90 @@ public class MesToErpDataService {
 	 * 物料同步 V1.3
 	 * 仅同步 ERP（JSPMATERIAL）表 BYTSTATUS=1的物料数据，完成后将 BYTSTATUS 置为 0。
 	 *  整改： 仅处理新增/修改，不处理删除逻辑 （中间表没有删除的标志）
+	 *   增加去重（后者覆盖前者）  20250202
 	 */
 	public int syncItemStock() {
-		// =============== 1. 数据准备 ===============
-		// 1.1 拉取ERP数据（Oracle）
+		// =============== 1. 拉取 ERP 数据 ===============
 		List<Map<String, Object>> erpList;
 		try {
 			erpList = mesToErpDataMapper.materialMessage();
 			log.info("[物料同步] ERP拉取数量：{}", erpList == null ? 0 : erpList.size());
-			System.out.println("[物料同步] ERP拉取数量："+ erpList.size());
+			System.out.println("[物料同步] ERP拉取数量：" + (erpList == null ? 0 : erpList.size()));
 		} catch (Exception e) {
 			log.error("[物料同步] ERP数据拉取失败", e);
-			System.out.println("[物料同步] ERP拉取数量："+ e);
-
+			System.out.println("[物料同步] ERP数据拉取失败：" + e);
 			return -1;
 		}
-
 		if (CollectionUtils.isEmpty(erpList)) {
-//			log.info("[物料同步] 无待同步数据");
-//			System.out.println("[物料同步] 无待同步数据");
 			return 0;
 		}
 
-		// 1.2 初始化容器
+		// =============== 2. 初始化并去重 ===============
 		LocalDateTime now = LocalDateTime.now();
-		List<String> erpItemCodes = new ArrayList<>();
-		List<MesItemStock> toSave = new ArrayList<>();
+		Set<String> erpItemCodeSet = new LinkedHashSet<>();            // 记录 ERP 物料编码（保持顺序且去重）
+		Map<String, MesItemStock> uniqueStockMap = new LinkedHashMap<>(); // 后者覆盖前者
 
-		// =============== 2. 预加载优化 ===============
-		// 2.1 提取ERP物料编码
-		for (Map<String, Object> item : erpList) {
-			erpItemCodes.add(item.get("STRITEMCODE").toString());
-		}
-
-		// =============== 3. 先删除MES中已存在的物料 ===============
-		if (!erpItemCodes.isEmpty()) {
-			try {
-				// 使用Mapper直接删除（需确保MesItemStockMapper中有对应方法）
-				int deletedCount = mesItemStockMapper.delete(
-						new QueryWrapper<MesItemStock>()
-								.in("item_no", erpItemCodes)
-				);
-				log.info("[物料同步] 已删除{}条旧物料", deletedCount);
-				System.out.println("[物料同步] 已删除{}条旧物料"+deletedCount);
-
-			} catch (Exception e) {
-				log.error("[物料同步] 删除旧物料失败", e);
-				System.out.println("[物料同步] 删除旧物料失败"+ e);
-				return -2;
-			}
-		}
-
-		// =============== 4. 构建新增数据 ===============
 		for (Map<String, Object> erpItem : erpList) {
 			String itemCode = erpItem.get("STRITEMCODE").toString();
+			erpItemCodeSet.add(itemCode);
 
-			// 4.1 创建新物料实体
 			MesItemStock stock = new MesItemStock();
-			stock.setId(IdUtil.fastSimpleUUID()); // 使用hutool工具类生成UUID
+			stock.setId(IdUtil.fastSimpleUUID());
 			stock.setCreatedBy("1");
 			stock.setCreatedTime(now);
 
-			// 4.2 字段映射
 			stock.setItemNo(itemCode);
 			stock.setItemName(erpItem.get("STRITEMNAME").toString());
 			stock.setItemModel(Objects.toString(erpItem.get("STRITEMSTYLE"), ""));
 			stock.setItemMeasure(erpItem.get("STRUNITNAME").toString());
 
-			// 数值处理
 			Object onhand = erpItem.get("DBLONHAND");
 			stock.setErpCount(onhand != null ? new BigDecimal(onhand.toString()) : BigDecimal.ZERO);
 			stock.setItemCount(stock.getErpCount());
 
-			// 来源类型处理
 			String sourceType = erpItem.get("BYTSOURCE").toString();
 			if ("0".equals(sourceType)) { // 自制件
 				stock.setItemType(EnumItemType.SELF_MADE.getCode());
 				stock.setItemOrigin(EnumItemOrigin.SELF.getCode());
 				stock.setBomNo("");
-			} else { // 采购件
+			} else {                      // 采购件
 				stock.setItemType(EnumItemType.PURCHASE.getCode());
 				stock.setItemOrigin(EnumItemOrigin.PURCHASE.getCode());
 				stock.setBomNo(Objects.toString(erpItem.get("STRBOMCODE"), stock.getItemModel()));
 			}
 
-			// 辅助单位处理
 			stock.setItemCountAssist(BigDecimal.ZERO);
 			stock.setItemMeasureAssist(Objects.toString(
 					erpItem.get("STRUNITNAMEAUX"),
 					erpItem.get("STRUNITNAME").toString()
 			));
 
-			// 状态和审计字段
-			stock.setIsValid("01");  //生效
+			stock.setIsValid("01");
 			stock.setUpdatedBy("1");
 			stock.setUpdatedTime(now);
 
-			toSave.add(stock);
+			uniqueStockMap.put(itemCode, stock); // 后者覆盖前者
 		}
 
-		// =============== 5. 批量新增数据 ===============
+		List<String> erpItemCodes = new ArrayList<>(erpItemCodeSet);
+		List<MesItemStock> toSave = new ArrayList<>(uniqueStockMap.values());
+
+		// =============== 3. 删除旧数据 ===============
+		if (!erpItemCodes.isEmpty()) {
+			try {
+				int deletedCount = mesItemStockMapper.delete(
+						new QueryWrapper<MesItemStock>().in("item_no", erpItemCodes)
+				);
+				log.info("[物料同步] 已删除{}条旧物料", deletedCount);
+				System.out.println("[物料同步] 已删除{}条旧物料" + deletedCount);
+			} catch (Exception e) {
+				log.error("[物料同步] 删除旧物料失败", e);
+				System.out.println("[物料同步] 删除旧物料失败" + e);
+				return -2;
+			}
+		}
+
+		// =============== 4. 批量新增 ===============
 		if (CollectionUtils.isEmpty(toSave)) {
 			log.warn("[物料同步] 无有效物料需要保存");
 			System.out.println("[物料同步] 无有效物料需要保存 ");
@@ -187,37 +171,32 @@ public class MesToErpDataService {
 
 		int saveCount;
 		try {
-			// 分批处理，每500条一批
 			int batchSize = 500;
 			for (int i = 0; i < toSave.size(); i += batchSize) {
 				int end = Math.min(i + batchSize, toSave.size());
-				List<MesItemStock> batchList = toSave.subList(i, end);
-				mesItemStockService.saveBatch(batchList);
+				mesItemStockService.saveBatch(toSave.subList(i, end));
 			}
 			saveCount = toSave.size();
 			log.info("[物料同步] 成功新增{}条物料", saveCount);
 		} catch (Exception e) {
 			log.error("[物料同步] 新增物料失败", e);
-			System.out.println("[物料同步] 新增物料失败 "+ e);
+			System.out.println("[物料同步] 新增物料失败 " + e);
 			return -3;
 		}
 
-		// =============== 6. 回写ERP（Oracle） ===============
+		// =============== 5. 回写 ERP ===============
 		if (CollectionUtils.isNotEmpty(erpItemCodes)) {
 			try {
-				// 分批回写ERP（每1000条一批）
 				int batchSize = 1000;
 				for (int i = 0; i < erpItemCodes.size(); i += batchSize) {
 					int end = Math.min(i + batchSize, erpItemCodes.size());
-					List<String> batchCodes = erpItemCodes.subList(i, end);
-					mesToErpDataMapper.materUpdate(batchCodes);
+					mesToErpDataMapper.materUpdate(erpItemCodes.subList(i, end));
 				}
 				log.info("[物料同步] 已回写ERP状态，共{}条", erpItemCodes.size());
-				System.out.println("[物料同步] 已回写ERP状态，共{}条 "+ erpItemCodes.size() );
-
+				System.out.println("[物料同步] 已回写ERP状态，共{}条 " + erpItemCodes.size());
 			} catch (Exception e) {
 				log.error("[物料同步] ERP回写失败", e);
-				System.out.println("[物料同步]  ERP回写失败"+ e);
+				System.out.println("[物料同步] ERP回写失败" + e);
 				return -4;
 			}
 		}
@@ -234,7 +213,6 @@ public class MesToErpDataService {
 	 * JSPBOM (ERP) :   拉取 BOM 用料数据（BYTSTATUS=0）
 	 * mes_item_use  ： INSERT 或 UPDATE（批量）：插入或更新 MES 的用料明细（树的跟节点）
 	 * 更新： 先删后增
-	 *
 	 *
 	 * @return 同步数量
 	 */
@@ -330,20 +308,20 @@ public class MesToErpDataService {
 	 * 只同步ERP端 BYTSTATUS=1 的工序数据（未同步/有变更），同步完成后回写BYTSTATUS=0。
 	 * 唯一性判定：bom_no（对应STRBOMCODE）+ procedure_code（对应STRROUTECODE）。
 	 * 整改： 删除条件不再是item_no + procedure_code   而是 item_no
-	 *
+	 * 	 修复：下面是包含“后者覆盖前者”去重逻辑的 syncProcedure 完整实现（仅保留必要的关键部分，可根据实际项目补充其他字段或方法）：
+	 *   修复：routerUpdate 在一次调用中携带了 16k+ 个 LNGBOMID，触发了 Oracle ORA‑01795（IN 列表最多只能 1000 个元素）。
 	 */
 	public int syncProcedure() {
 		// =============== 1. 数据准备 ===============
-		// 1.1 拉取ERP数据（Oracle）
+		// 1.1 拉取 ERP 数据（Oracle）
 		List<Map<String, Object>> erpRouterList;
 		try {
 			erpRouterList = mesToErpDataMapper.bomRouter();
-			log.info("[工序同步] ERP拉取数量：{}", erpRouterList == null ? 0 : erpRouterList.size());
+			log.info("[工序同步] ERP 拉取数量：{}", erpRouterList == null ? 0 : erpRouterList.size());
 		} catch (Exception e) {
-			log.error("[工序同步] ERP数据拉取失败", e);
+			log.error("[工序同步] ERP 数据拉取失败", e);
 			return -1;
 		}
-
 		if (CollectionUtils.isEmpty(erpRouterList)) {
 			log.info("[工序同步] 无待同步数据");
 			return 0;
@@ -352,30 +330,27 @@ public class MesToErpDataService {
 		// 1.2 初始化容器
 		LocalDateTime now = LocalDateTime.now();
 		List<Integer> successRouterIds = new ArrayList<>();
-		List<MesProcedure> toSave = new ArrayList<>();
 
 		// =============== 2. 预加载优化 ===============
-		// 2.1 预加载BOM映射（MySQL）
+		// 2.1 预加载 BOM 映射（MySQL）
 		Set<String> distinctBomNos = new HashSet<>();
 		for (Map<String, Object> item : erpRouterList) {
 			distinctBomNos.add(item.get("STRBOMCODE").toString());
 		}
-		Map<String, MesItemStock> bomToStock = mesItemStockService.getByBomNos(new ArrayList<>(distinctBomNos));
+		Map<String, MesItemStock> bomToStock =
+				mesItemStockService.getByBomNos(new ArrayList<>(distinctBomNos));
 
-		// 2.2 获取所有需要同步的工序键
+		// 2.2 获取所有需要同步的工序 item_no
 		Set<String> erpItemNos = new HashSet<>();
 		for (Map<String, Object> erpItem : erpRouterList) {
 			String bomNo = erpItem.get("STRBOMCODE").toString();
-
-			// 验证是否有物料bom!
 			MesItemStock stock = bomToStock.get(bomNo);
 			if (stock != null && StringUtils.isNotEmpty(stock.getItemNo())) {
 				erpItemNos.add(stock.getItemNo());
 			}
 		}
 
-
-		// =============== 3. 先删除MES中已存在的工序 ===============
+		// =============== 3. 先删除 MES 中已存在的工序 ===============
 		if (!erpItemNos.isEmpty()) {
 			try {
 				List<String> itemNos = new ArrayList<>(erpItemNos);
@@ -383,8 +358,7 @@ public class MesToErpDataService {
 				int totalDeleted = 0;
 				for (int i = 0; i < itemNos.size(); i += batchSize) {
 					List<String> batch = itemNos.subList(i, Math.min(i + batchSize, itemNos.size()));
-					int deletedCount = mesProcedureMapper.deleteByItemNos(batch);
-					totalDeleted += deletedCount;
+					totalDeleted += mesProcedureMapper.deleteByItemNos(batch);
 				}
 				log.info("[工序同步] 已按 item_no 删除工序记录，合计删除 {}", totalDeleted);
 			} catch (Exception e) {
@@ -393,27 +367,25 @@ public class MesToErpDataService {
 			}
 		}
 
+		// =============== 4. 构建新增数据并去重（后者覆盖前者） ===============
+		Map<String, MesProcedure> uniqueMap = new LinkedHashMap<>();
 
-		// =============== 4. 构建新增数据 ===============
 		for (Map<String, Object> erpItem : erpRouterList) {
 			String bomNo = erpItem.get("STRBOMCODE").toString();
 			MesItemStock stock = bomToStock.get(bomNo);
 
-			// 4.1 跳过无效BOM
-			// 判定逻辑： 1、ERP 发过来的 BOM 编码在 MES 中根本找不到对应物料。 2、虽然找到了 MesItemStock 对象，但其 itemNo 字段是 null 或 ""。
-
+			// 4.1 跳过无效 BOM
 			if (stock == null || StringUtils.isEmpty(stock.getItemNo())) {
-				log.warn("[工序同步] 跳过无效BOM: {}", bomNo);
+				log.warn("[工序同步] 跳过无效 BOM: {}", bomNo);
 				continue;
 			}
 
-			// 4.2 创建新工序实体（不再检查是否存在）
+			// 4.2 创建新工序实体（后者覆盖前者）
 			MesProcedure p = new MesProcedure();
 			p.setId(UUID.randomUUID().toString().replace("-", ""));
 			p.setCreatedBy("1");
 			p.setCreatedTime(now);
 
-			// 字段映射    todo: 参考我给你原始代码  来补齐字段
 			p.setBomNo(bomNo);
 			p.setItemNo(stock.getItemNo());
 			p.setProcedureCode(erpItem.get("STRROUTECODE").toString());
@@ -422,36 +394,31 @@ public class MesToErpDataService {
 			p.setUpdatedBy("1");
 			p.setUpdatedTime(now);
 
-			// 序号
 			p.setSeqNo(safeParseInt(erpItem.get("LNGORDER")));
-			// 加工工时（定额工时）
 			p.setHoursFixed(safeParseDecimal(erpItem.get("DBLROUTERATIONTIME")));
-			// 实际工时
-			//p.setHoursWork(safeParseDecimal(erpItem.get("DBLROUTEPROCESSTIME"))); // 注意这里和hoursFixed使用相同字段
-			p.setHoursWork(safeParseDecimal(erpItem.get("DBLROUTERATIONTIME"))); // 临时补丁，注意这里和hoursFixed使用相同字段
-
-
-			// 准备工时
+			p.setHoursWork(safeParseDecimal(erpItem.get("DBLROUTERATIONTIME")));   // 临时补丁
 			p.setHoursPrepare(safeParseDecimal(erpItem.get("DBLROUTEPREPARETIME")));
 
-
-			// 工作车间Id
-			String deptName = erpItem.get("STRDEPARTMENTNAME") == null ? "" : erpItem.get("STRDEPARTMENTNAME").toString();
+			String deptName =
+					erpItem.get("STRDEPARTMENTNAME") == null
+							? ""
+							: erpItem.get("STRDEPARTMENTNAME").toString();
 			if ("制造部".equals(deptName)) {
-				p.setDeptId("312905765054574592"); // 制造部固定id
+				p.setDeptId("312905765054574592");
 			} else {
-				p.setDeptId("316142126431625216"); // 其他部门
+				p.setDeptId("316142126431625216");
 			}
 
-			// 设备Id（实际映射需你补充具体逻辑）
-			// 参考片段：procedureItem.setDeviceId(getDeviceName(jspBomRouter.get("STRROUTECODE").toString()));
-			p.setDeviceId(getDeviceName(erpItem.get("STRROUTECODE").toString())); // 需提供getDeviceName方法
+			p.setDeviceId(getDeviceName(erpItem.get("STRROUTECODE").toString()));
 
+			// 唯一键：itemNo + procedureCode，后放入的覆盖前者
+			String uniqueKey = p.getItemNo() + "#" + p.getProcedureCode();
+			uniqueMap.put(uniqueKey, p);
 
-
-			toSave.add(p);
 			successRouterIds.add(safeParseInt(erpItem.get("LNGBOMID")));
 		}
+
+		List<MesProcedure> toSave = new ArrayList<>(uniqueMap.values());
 
 		// =============== 5. 批量新增数据 ===============
 		if (CollectionUtils.isEmpty(toSave)) {
@@ -461,21 +428,27 @@ public class MesToErpDataService {
 
 		int saveCount;
 		try {
-			boolean saveResult = mesProcedureService.saveBatch(toSave, 500); // 使用saveBatch而非saveOrUpdateBatch
+			boolean saveResult = mesProcedureService.saveBatch(toSave, 500);
 			saveCount = saveResult ? toSave.size() : 0;
-			log.info("[工序同步] 成功新增{}条工序", saveCount);
+			log.info("[工序同步] 成功新增 {} 条工序", saveCount);
 		} catch (Exception e) {
 			log.error("[工序同步] 新增工序失败", e);
 			return -3;
 		}
 
-		// =============== 6. 回写ERP（Oracle） ===============
+		// =============== 6. 回写 ERP（分批以避免 ORA-01795） ===============
 		if (CollectionUtils.isNotEmpty(successRouterIds)) {
 			try {
-				int updateCount = mesToErpDataMapper.routerUpdate(successRouterIds);
-				log.info("[工序同步] 已回写{}条ERP状态", updateCount);
+				int batchSize = 1000;
+				int total = 0;
+				for (int i = 0; i < successRouterIds.size(); i += batchSize) {
+					List<Integer> batch =
+							successRouterIds.subList(i, Math.min(i + batchSize, successRouterIds.size()));
+					total += mesToErpDataMapper.routerUpdate(batch);
+				}
+				log.info("[工序同步] 已回写 {} 条 ERP 状态", total);
 			} catch (Exception e) {
-				log.error("[工序同步] ERP回写失败", e);
+				log.error("[工序同步] ERP 回写失败", e);
 				return -4;
 			}
 		}

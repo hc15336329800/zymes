@@ -1,0 +1,27 @@
+接口逻辑概述
+Controller
+POST /api/work/worker_report_dtl/detail_page_list 由 WorkerReportDtlController 暴露，取出请求参数后直接调用 WorkerReportDtlService.detailPageList 获取分页结果
+
+Service
+detailPageList 在 WorkerReportDtlServiceImpl 中通过 PageUtil 调用 Mapper 的 detailPageList 查询，并按分页返回
+
+Mapper / SQL
+WorkerReportDtlMapper.xml 的 detailPageList 语句从 t_worker_report_dtl（twrd）和 t_work_order（two）关联查询，同时关联 t_order_dtl 获取订单号；工资字段 wages 通过 twrd.user_count * two.hours_fixed 动态计算，无单独工资表
+
+工资计算与数据来源
+t_worker_report_dtl（实体 WorkerReportDtl）只记录报工明细，如 userId、userCount、workOrderId 等，不包含工资字段
+
+t_work_order（实体 WorkOrder）提供每道工序的单价/定额工时 hoursFixed，用于工资计算
+
+Mapper SQL 以 user_count * hours_fixed 计算工资，并按报工时间降序返回明细
+
+总结
+该工资明细接口 没有独立的工资表。工资金额在查询时由报工数量 (user_count) 与工单定额工时 (hours_fixed) 相乘得到，整个流程为：
+
+Controller → Service → Mapper SQL（动态计算工资） → 返回分页结果。
+
+
+关于报工后审核验收后依然没有工资：
+- 大概率是合共组（分组）里面的合共比例没设置为1、默认为0了。、
+t_worker_report_dtl 的数据是在报工单验收通过后，由 ProcAllocationManagerImpl.updateWorkReport 中的 computeByGroupDtl 生成。
+该方法会读取 group_id 对应分组的明细（t_group_dtl），为每个组员生成一条明细记录。若分组明细为空，就不会插入任何数据。

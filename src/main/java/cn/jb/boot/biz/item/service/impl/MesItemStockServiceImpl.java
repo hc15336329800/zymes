@@ -70,7 +70,7 @@ public class MesItemStockServiceImpl extends ServiceImpl<MesItemStockMapper, Mes
 
     ////////////////////////////////////////////////////////////////////////////新街口//////////////////////////////////////////////////////////////////////////////////
 
-
+    //  mes_item_stock表会正常插入这些物料，即使中间库存表（mid_item_stock）报错。
     @Transactional(rollbackFor = Throwable.class)
     public ImportResult uploadNew(HttpServletRequest request) {
         ImportResult result = new ImportResult();

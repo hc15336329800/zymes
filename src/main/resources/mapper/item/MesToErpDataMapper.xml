@@ -42,9 +42,17 @@
     </select>
 
     <!-- 回写同步状态 -->
+<!--    <update id="routerUpdate">-->
+<!--        UPDATE JSP.JSPBOMROUTER SET BYTSTATUS = 1 WHERE LNGBOMID IN-->
+<!--        <foreach item="id" collection="routerIdList" open="(" separator="," close=")">-->
+<!--            #{id}-->
+<!--        </foreach>-->
+<!--    </update>-->
     <update id="routerUpdate">
-        UPDATE JSP.JSPBOMROUTER SET BYTSTATUS = 1 WHERE LNGBOMID IN
-        <foreach item="id" collection="routerIdList" open="(" separator="," close=")">
+        UPDATE JSP.JSPBOMROUTER
+        SET BYTSTATUS = 1
+        WHERE LNGBOMID IN
+        <foreach collection="routerIdList" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
     </update>
