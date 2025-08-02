@@ -2,6 +2,7 @@ package cn.jb.boot.biz.item.service.impl;
 
 import cn.jb.boot.biz.device.entity.DeviceInfo;
 import cn.jb.boot.biz.device.service.DeviceInfoService;
+import cn.jb.boot.biz.item.dto.MesProcedureImportResult;
 import cn.jb.boot.biz.item.entity.MesItemStock;
 import cn.jb.boot.biz.item.entity.MesProcedure;
 import cn.jb.boot.biz.item.mapper.MesProcedureMapper;
@@ -81,9 +82,106 @@ public class MesProcedureServiceImpl extends ServiceImpl<MesProcedureMapper, Mes
         return PojoUtil.copyList(list, MesProcedureInfoResponse.class);
     }
 
+    /////////////////////////////////////导入工序  增加执行结果/////////////////////////////////////////
     @Override
     @Transactional(rollbackFor = Throwable.class)
-    public void upload(HttpServletRequest request) {
+    public MesProcedureImportResult upload(HttpServletRequest request) {
+        // === 新增：返回结构体，包含成功失败汇总 ===
+        MesProcedureImportResult result = new MesProcedureImportResult();
+
+        MultipartFile file = FileUtil.getFile(request);
+        List<MesProcedureUploadResponse> list = EasyExcelUtil.importExcel(file, MesProcedureUploadResponse.class);
+
+        if (CollectionUtils.isEmpty(list)) {
+            // === 新增：无数据失败统计 ===
+            MesProcedureImportResult.FailDetail fail = new MesProcedureImportResult.FailDetail();
+            fail.setRowNum(0);
+            fail.setReason("导入失败：文件无有效数据");
+            result.getFailList().add(fail);
+            result.setFailCount(1);
+            return result;
+        }
+
+        List<String> boms = list.stream().map(MesProcedureUploadResponse::getBomNo).distinct().collect(Collectors.toList());
+        Map<String, MesItemStock> bomMap = stockService.getByBomNos(boms);
+        Map<String, String> deviceMap = getDeviceMap(list);
+        Map<String, String> workShopMap = getWorkShopMap();
+
+        List<MesProcedure> mps = new ArrayList<>();
+
+        // === 新增：每行校验与成功失败分流 ===
+        int rowNum = 2; // Excel数据行（从2开始）
+        for (MesProcedureUploadResponse response : list) {
+            boolean hasMissing = false;
+            StringBuilder reason = new StringBuilder();
+
+            // 必填项判定
+            if (StringUtils.isBlank(response.getBomNo())) {
+                hasMissing = true; reason.append("BOM编号为空;");
+            }
+            if (StringUtils.isBlank(response.getProcedureName())) {
+                hasMissing = true; reason.append("工序名称为空;");
+            }
+            if (StringUtils.isBlank(response.getProcedureCode())) {
+                hasMissing = true; reason.append("工序编码为空;");
+            }
+            if (response.getSeqNo() == null) {
+                hasMissing = true; reason.append("工序顺序为空;");
+            }
+
+            // BOM编号必须存在于系统
+            if (!hasMissing && !bomMap.containsKey(response.getBomNo())) {
+                hasMissing = true; reason.append("BOM编号在系统不存在;");
+            }
+
+            if (hasMissing) {
+                // === 新增：统计失败 ===
+                MesProcedureImportResult.FailDetail fail = new MesProcedureImportResult.FailDetail();
+                fail.setRowNum(rowNum);
+                fail.setBomNo(response.getBomNo());
+                fail.setReason(reason.toString());
+                result.getFailList().add(fail);
+                result.setFailCount(result.getFailCount() + 1);
+                rowNum++;
+                continue;
+            }
+
+            try {
+                // === 原有核心业务逻辑 不删减 ===
+                if (bomMap.containsKey(response.getBomNo())) {
+                    MesProcedure mp = PojoUtil.copyBean(response, MesProcedure.class);
+                    MesItemStock mis = bomMap.get(response.getBomNo());
+                    mp.setItemNo(mis.getItemNo());
+                    mp.setDeviceId(deviceMap.get(response.getDeviceName()));
+                    mp.setDeptId(workShopMap.get(response.getWorkShopName()));
+                    mp.setShortCode(PingYinUtil.converterToFirstSpell(response.getProcedureName()));
+                    mps.add(mp);
+                }
+                result.setSuccessCount(result.getSuccessCount() + 1); // === 新增成功统计 ===
+            } catch (Exception e) {
+                MesProcedureImportResult.FailDetail fail = new MesProcedureImportResult.FailDetail();
+                fail.setRowNum(rowNum);
+                fail.setBomNo(response.getBomNo());
+                fail.setReason("数据处理异常:" + e.getMessage());
+                result.getFailList().add(fail);
+                result.setFailCount(result.getFailCount() + 1);
+            }
+            rowNum++;
+        }
+
+        List<String> itemNos = mps.stream().map(MesProcedure::getItemNo).collect(Collectors.toList());
+        if (!itemNos.isEmpty()) {
+            this.remove(new LambdaQueryWrapper<MesProcedure>().in(MesProcedure::getItemNo, itemNos));
+            this.saveBatch(mps);
+        }
+
+        return result;
+    }
+
+    //////////////////////////////////////////////////////////////////////////////
+    @Override
+    @Transactional(rollbackFor = Throwable.class)
+    public void uploadV1(HttpServletRequest request) {
         MultipartFile file = FileUtil.getFile(request);
         List<MesProcedureUploadResponse> list = EasyExcelUtil.importExcel(file, MesProcedureUploadResponse.class);
         if (CollectionUtils.isNotEmpty(list)) {

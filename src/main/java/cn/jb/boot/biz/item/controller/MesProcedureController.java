@@ -1,5 +1,6 @@
 package cn.jb.boot.biz.item.controller;
 
+import cn.jb.boot.biz.item.dto.MesProcedureImportResult;
 import cn.jb.boot.biz.item.vo.request.ItemProcedureRequest;
 import cn.jb.boot.biz.item.vo.request.MesProcedureCreateRequest;
 import cn.jb.boot.biz.item.vo.request.MesProcedurePageRequest;
@@ -132,12 +133,21 @@ public class MesProcedureController {
         service.export(response, MsgUtil.params(request).getId());
     }
 
+//    @PostMapping("/upload")
+//    @Operation(summary = "工序导入")
+//    public BaseResponse<String> upload(HttpServletRequest request) {
+//        service.upload(request);
+//        return MsgUtil.ok();
+//    }
+
+
     @PostMapping("/upload")
     @Operation(summary = "工序导入")
-    public BaseResponse<String> upload(HttpServletRequest request) {
-        service.upload(request);
-        return MsgUtil.ok();
+    public BaseResponse<MesProcedureImportResult> upload(HttpServletRequest request) {
+        MesProcedureImportResult result = service.upload(request);
+        return BaseResponse.ok(result);
     }
+
 
     /**
      * 分页查询信息

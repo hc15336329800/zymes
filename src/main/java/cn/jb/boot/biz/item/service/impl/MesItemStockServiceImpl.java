@@ -100,25 +100,40 @@ public class MesItemStockServiceImpl extends ServiceImpl<MesItemStockMapper, Mes
             }
 
             // 3. 准备库位映射
-            Map<String,String> locMap = DictUtil.getDictCache(DictType.WARE_HOUSE)
-                    .stream().collect(Collectors.toMap(d->d.getDictLabel(), d->d.getDictValue(), (a,b)->a));
+            Map<String, String> locMap = DictUtil.getDictCache(DictType.WARE_HOUSE)
+                    .stream().collect(Collectors.toMap(d -> d.getDictLabel(), d -> d.getDictValue(), (a, b) -> a));
+
+            // ==============================
+            // 【优化点1】新增必填字段缺失行号收集器（仅物品编码、数量）
+            // ==============================
+            Map<String, List<Integer>> missingFieldRows = new LinkedHashMap<>(); // 字段名 -> 行号集合
 
             // 4. 处理数据并记录结果
             Map<String, MesItemStock> unique = new LinkedHashMap<>();
-            for (MesItemUploadRequest r : list) {
-                String itemNo = StringUtils.trimToEmpty(r.getItemNo());
-                if (itemNo.isEmpty()) {
-                    ImportResult.FailItem failItem = new ImportResult.FailItem();
-                    failItem.setItemNo("N/A");
-                    failItem.setReason("物料编码为空");
-                    result.getFailList().add(failItem);
-                    continue;
+            for (int i = 0; i < list.size(); i++) {
+                MesItemUploadRequest r = list.get(i);
+                int rowNum = i + 2; // Excel实际行号（含表头）
+
+                // ==============================
+                // 【优化点2】必填字段校验并收集缺失行号（只校验物品编码、数量）
+                // ==============================
+                boolean hasMissing = false;
+                if (StringUtils.isBlank(r.getItemNo())) {
+                    missingFieldRows.computeIfAbsent("物品编码", k -> new ArrayList<>()).add(rowNum);
+                    hasMissing = true;
+                }
+                if (r.getItemCount() == null) {
+                    missingFieldRows.computeIfAbsent("数量", k -> new ArrayList<>()).add(rowNum);
+                    hasMissing = true;
+                }
+                if (hasMissing) {
+                    continue; // 本行缺必填字段，后续处理跳过
                 }
 
                 try {
                     // 构造 MesItemStock 对象
                     MesItemStock mis = new MesItemStock();
-                    mis.setItemNo(itemNo);
+                    mis.setItemNo(StringUtils.trimToEmpty(r.getItemNo()));
                     mis.setItemName(r.getItemName());
                     mis.setItemCount(r.getItemCount());
                     mis.setItemMeasure(r.getItemMeasure());
@@ -137,14 +152,26 @@ public class MesItemStockServiceImpl extends ServiceImpl<MesItemStockMapper, Mes
                     // 库位映射
                     mis.setLocation(locMap.getOrDefault(r.getLocation(), ""));
 
-                    unique.put(itemNo, mis);
-                    result.getSuccessList().add(itemNo);
+                    unique.put(mis.getItemNo(), mis);
+                    result.getSuccessList().add(mis.getItemNo());
                 } catch (Exception e) {
                     ImportResult.FailItem failItem = new ImportResult.FailItem();
-                    failItem.setItemNo(itemNo);
+                    failItem.setItemNo(r.getItemNo());
                     failItem.setReason("数据处理失败: " + e.getMessage());
                     result.getFailList().add(failItem);
                 }
+            }
+
+            // ==============================
+            // 【优化点3】必填字段缺失统一追加 failList（放在业务校验后，保存数据之前）
+            // ==============================
+            if (!missingFieldRows.isEmpty()) {
+                for (Map.Entry<String, List<Integer>> entry : missingFieldRows.entrySet()) {
+                    ImportResult.FailItem failItem = new ImportResult.FailItem();
+                    failItem.setReason("导入失败：存在必填字段[" + entry.getKey() + "]为空，行号：" + entry.getValue());
+                    result.getFailList().add(failItem);
+                }
+                return result;
             }
 
             List<MesItemStock> toAdd = new ArrayList<>(unique.values());
@@ -218,6 +245,8 @@ public class MesItemStockServiceImpl extends ServiceImpl<MesItemStockMapper, Mes
             return result;
         }
     }
+
+
     /**
      * 新接口V3： 物料上传 Excel → 导入 mes_item_stock → 更新 mid_item_stock（所有在同一事务中）
      * 修复第7步
