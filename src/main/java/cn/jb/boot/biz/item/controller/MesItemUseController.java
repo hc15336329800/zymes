@@ -81,23 +81,23 @@ public class MesItemUseController {
 //        }
 //    }
 //
-//    /**
-//     *  内同步接口  || 只测试内同步（bom和工序）（按时间）
-//     */
-//    @PostMapping("/inner_sync_bom")
-//    @Operation(summary = "内部同步BOM树")
-//    public AjaxResult innerSyncBom (@RequestBody(required = false) Map<String, Object> params) {
-//        try {
-//            String syncTime = Optional.ofNullable(params)
-//                    .map(p -> (String)p.get("syncTime"))
-//                    .orElse(null);
-//
-//            getErpDataJob.syncErpToMesBom(syncTime);
-//            return AjaxResult.success("外部同步ERP数据到MES完成");
-//        } catch (Exception e) {
-//            return AjaxResult.error("外部同步ERP数据到MES失败: " + e.getMessage());
-//        }
-//    }
+    /**
+     *  内同步接口  || 只测试内同步（bom和工序）（按时间） 全量 不再按时间
+     */
+    @PostMapping("/inner_sync_bom")
+    @Operation(summary = "内部同步BOM树")
+    public AjaxResult innerSyncBom (@RequestBody(required = false) Map<String, Object> params) {
+        try {
+            String syncTime = Optional.ofNullable(params)
+                    .map(p -> (String)p.get("syncTime"))
+                    .orElse(null);
+
+            getErpDataJob.syncErpToMesBom();
+            return AjaxResult.success("外部同步ERP数据到MES完成");
+        } catch (Exception e) {
+            return AjaxResult.error("外部同步ERP数据到MES失败: " + e.getMessage());
+        }
+    }
 //
 //    /**
 //     * 外同步接口  || 只测试外同步（  原料物料+bom物料、 bom临时依赖、  工序表）

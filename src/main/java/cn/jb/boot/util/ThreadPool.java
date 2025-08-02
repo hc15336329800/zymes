@@ -9,6 +9,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * **本类就是为了把常见的异步场景（定时、单线程、批量、通用异步）
+ * **统一收口、易于配置和扩展，避免资源争抢和维护混乱。你直接用上面的静态方法就行，不要自己再造轮子！
  * @author xyb
  * @Description
  * @Date 2022/8/15 20:38

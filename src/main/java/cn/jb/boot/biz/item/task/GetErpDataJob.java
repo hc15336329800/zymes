@@ -37,6 +37,10 @@ public class GetErpDataJob {
 	private volatile boolean runningMes = false; // 防止重复执行标志位
 
 
+	private volatile boolean runningMesAll = false; // 防止重复执行标志位  全量
+
+
+
 
 
 	//===========================自动定时全同步==================================
@@ -197,6 +201,47 @@ public class GetErpDataJob {
 			runningMes = false; // 保证任务结束后重置标志位
 		}
 	}
+
+
+
+
+	/**
+	 * 整体MES构建方法   (2025-03 k开始构建bom ,   MES全量构建任)
+	 */
+	public void syncErpToMesBom() {
+		if (runningMesAll) {
+			log.warn("======【MES全量构建任务正在执行，跳过本次调度】======");
+			return;
+		}
+		runningMesAll = true; // 【新增：调度开始，设为true】
+
+		String processStr = "2025-03-01 00:00:00";
+		log.info("======【起始时间】{}======", processStr);
+
+		long allStart = System.currentTimeMillis();
+		try {
+			List<Task> tasks = Arrays.asList(
+					new Task("MES BOM依赖", () -> { getMesDataJob.bom(processStr); return 0; }),
+					new Task("MES 工序", () -> { getMesDataJob.process(processStr); return 0; })
+			);
+			for (Task t : tasks) {
+				long start = System.currentTimeMillis();
+				log.info("【MES任务开始】{}", t.name);
+				try {
+					int count = t.action.get();
+					long cost = System.currentTimeMillis() - start;
+					log.info("【MES任务结束】{} | {} | 耗时：{} ms", t.name, (count == 0 ? "完成内部逻辑，无统计数量" : "数量：" + count), cost);
+				} catch (Exception e) {
+					long cost = System.currentTimeMillis() - start;
+					log.error("【MES任务失败】{} | 耗时：{} ms | 错误：{}", t.name, cost, e.getMessage(), e);
+				}
+			}
+			log.info("======【MES构建任务结束】总耗时：{} ms======", System.currentTimeMillis() - allStart);
+		} finally {
+			runningMesAll = false; // 【新增：任务全部完成或异常，重置状态】
+		}
+	}
+
 
 
 
