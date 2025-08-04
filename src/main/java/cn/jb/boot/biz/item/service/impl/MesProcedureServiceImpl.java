@@ -85,28 +85,19 @@ public class MesProcedureServiceImpl extends ServiceImpl<MesProcedureMapper, Mes
     @Override
     @Transactional(rollbackFor = Throwable.class)
     public MesProcedureImportResult upload(HttpServletRequest request) {
-        // === 新增：返回结构体，包含成功失败汇总 ===
+
         MesProcedureImportResult result = new MesProcedureImportResult();
         MultipartFile file = FileUtil.getFile(request);
 
-        // === 新增：必须字段检查 ===
+        // 读取表头并校验必填字段
         try {
-            // 定义必须字段列表
             String[] requiredFields = {"母件BOM", "序号", "工序编码", "工序名称", "工作车间", "定额工时", "加工工时"};
-
-             // 仅读取第一行作为表头
-            List<Map<Integer, String>> rows = EasyExcel.read(file.getInputStream())
-                    .sheet()
-                    .doReadSync();
-
-            Set<String> existingHeaders = rows.isEmpty()
-                    ? Collections.emptySet()
-                    : new HashSet<>(rows.get(0).values());
+            List<String> head = EasyExcelUtil.readHead(file);
+            Set<String> existingHeaders = new HashSet<>(head);
 
             List<String> missingFields = Arrays.stream(requiredFields)
                     .filter(field -> !existingHeaders.contains(field))
                     .collect(Collectors.toList());
-
             if (!missingFields.isEmpty()) {
                 MesProcedureImportResult.FailDetail fail = new MesProcedureImportResult.FailDetail();
                 fail.setRowNum(0);
@@ -124,11 +115,9 @@ public class MesProcedureServiceImpl extends ServiceImpl<MesProcedureMapper, Mes
             return result;
         }
 
-
+        // 读取数据并逐行校验
         List<MesProcedureUploadResponse> list = EasyExcelUtil.importExcel(file, MesProcedureUploadResponse.class);
-
         if (CollectionUtils.isEmpty(list)) {
-            // === 新增：无数据失败统计 ===
             MesProcedureImportResult.FailDetail fail = new MesProcedureImportResult.FailDetail();
             fail.setRowNum(0);
             fail.setReason("导入失败：文件无有效数据");

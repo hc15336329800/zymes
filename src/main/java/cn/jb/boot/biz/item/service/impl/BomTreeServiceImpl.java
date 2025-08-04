@@ -64,6 +64,7 @@ public class BomTreeServiceImpl
 		self.setUseItemNo(rootItemNo);
 		self.setUseItemType("01");
 		self.setUseItemCount(BigDecimal.ONE);
+		self.setFixedUsed(BigDecimal.ONE); // 新增：固定用量与数量保持一致
 		self.setItemNos(rootItemNo);
 		buf.add(self);
 
@@ -85,7 +86,13 @@ public class BomTreeServiceImpl
 			bu.setParentCode(parent);
 			bu.setUseItemNo(mu.getUseItemNo());
 			bu.setUseItemType(mu.getUseItemType());
+			BigDecimal qty = mu.getUseItemCount();
+			if (qty == null) {                 // use_item_count 为空时，用固定用量
+				qty = mu.getFixedUse();
+			}
 			bu.setUseItemCount(mu.getUseItemCount());
+			bu.setFixedUsed(qty);              // 新增：固定用量同步
+
 			bu.setItemNos(root + "|" + mu.getUseItemNo());
 			out.add(bu);
 

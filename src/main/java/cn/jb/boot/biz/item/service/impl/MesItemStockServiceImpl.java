@@ -136,6 +136,7 @@ public class MesItemStockServiceImpl extends ServiceImpl<MesItemStockMapper, Mes
                     mis.setItemNo(StringUtils.trimToEmpty(r.getItemNo()));
                     mis.setItemName(r.getItemName());
                     mis.setItemCount(r.getItemCount());
+                    //   mis.setUseItemCount(r.getItemCount()); // 新增：use_item_count 与 item_count 同步
                     mis.setItemMeasure(r.getItemMeasure());
                     mis.setItemOrigin(r.getItemOrigin());
                     mis.setItemModel(r.getItemModel());
