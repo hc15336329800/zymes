@@ -94,19 +94,19 @@ public class MesProcedureServiceImpl extends ServiceImpl<MesProcedureMapper, Mes
             // 定义必须字段列表
             String[] requiredFields = {"母件BOM", "序号", "工序编码", "工序名称", "工作车间", "定额工时", "加工工时"};
 
-            // 仅读取第一行作为表头
-            List<List<String>> rows = EasyExcel.read(file.getInputStream())
+             // 仅读取第一行作为表头
+            List<Map<Integer, String>> rows = EasyExcel.read(file.getInputStream())
                     .sheet()
                     .doReadSync();
 
             Set<String> existingHeaders = rows.isEmpty()
-                    ? Collections.<String>emptySet()      // 显式指定泛型
-                    : new HashSet<>(rows.get(0));
+                    ? Collections.emptySet()
+                    : new HashSet<>(rows.get(0).values());
 
             List<String> missingFields = Arrays.stream(requiredFields)
                     .filter(field -> !existingHeaders.contains(field))
                     .collect(Collectors.toList());
-            
+
             if (!missingFields.isEmpty()) {
                 MesProcedureImportResult.FailDetail fail = new MesProcedureImportResult.FailDetail();
                 fail.setRowNum(0);
