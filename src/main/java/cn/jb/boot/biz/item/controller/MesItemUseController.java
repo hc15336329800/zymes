@@ -84,7 +84,7 @@ public class MesItemUseController {
     /**
      *  内同步接口  || 只测试内同步（bom和工序）（按时间） 全量   最近一小时
      */
-    @PostMapping("/inner_sync_bom")
+    @PostMapping("/inner_sync_bom_item")
     @Operation(summary = "内部同步BOM树")
     public AjaxResult innerSyncBom (@RequestBody(required = false) Map<String, Object> params) {
         try {
