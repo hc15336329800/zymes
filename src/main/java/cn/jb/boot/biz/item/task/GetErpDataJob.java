@@ -51,7 +51,7 @@ public class GetErpDataJob {
 	//===========================自动定时全同步==================================
 
 	/**
-	 * 整体ERP同步方法
+	 * 整体ERP同步方法 外部
 	 */
 //	@Scheduled(cron = "0 0/1 * * * ?")
 	public void syncErpToMesAll() {

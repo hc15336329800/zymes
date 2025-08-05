@@ -265,9 +265,9 @@ public class MesToErpDataService {
 			// 字段填充
 			use.setItemNo(itemNo);
 			use.setUseItemNo(useItemNo);
-			use.setUseItemCount(new BigDecimal(row.get("DBLQUANTITY").toString()));
+			use.setUseItemCount(new BigDecimal(row.get("DBLUSEQUANTITY").toString())); //用量
 			use.setVariUse(BigDecimal.ZERO);
-			use.setFixedUse(new BigDecimal(row.get("DBLQUANTITY").toString()));
+			use.setFixedUse(new BigDecimal(row.get("DBLUSEQUANTITY").toString())); // 用量
 			use.setUseItemMeasure(row.get("STRNEXTITEMUNIT").toString());
 			use.setItemMeasureAssist(row.get("STRUNITNAMEAUX").toString());
 			use.setFixedUseAssist(new BigDecimal(row.get("DBLQUANTITYAUX").toString()));
