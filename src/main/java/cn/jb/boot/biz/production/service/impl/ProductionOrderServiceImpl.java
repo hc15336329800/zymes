@@ -277,6 +277,8 @@ public void delete(List<String> ids) {
 
         for (BomUsed bom : usedList) {
             String useItemNo = bom.getUseItemNo();
+
+            // 数量计算：每条子件记录的数量为 bom_used.use_item_count * rootCount，即 BOM 定义的单件用量 × 根订单计划数量。
             BigDecimal itemCount = ArithUtil.mul(bom.getUseItemCount(), rootCount);
 
             OrderDtl dtl = new OrderDtl();
