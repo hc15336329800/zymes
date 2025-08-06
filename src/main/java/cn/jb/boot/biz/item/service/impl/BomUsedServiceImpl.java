@@ -75,6 +75,9 @@ public class BomUsedServiceImpl extends ServiceImpl<BomUsedMapper, BomUsed> impl
 //        }
     }
 
+    //在 loadWithParents 中，系统会先刷新受影响物料的更新时间，然后获取所有需要重建的 BOM 物料，并对每个物料执行 loadBomData（向下构建）和 loadParBomData（向上递归到所有母件）。loadParBomData 使用 itList.contains(itemNo) 检查是否已处理，从而避免死循环；下行遍历 findChildUse 也用 visited 集合和深度限制 20 防止循环。因此代码层面已经有“访问过检查”，出现长时间执行更可能是由于数据量、重复计算或查询效率等原因，而非真正的无限循环。
+    //  如果是全量更新，则只需要调用   loadBomData(stock);即可。
+    //  因此，全量重建 → 只调用 loadBomData 即可；增量更新 → 仍需 loadParBomData 以同步母件。
     @Override
     public void loadWithParents(String startTime) {
         // 1. 先刷新那些因为用料变化而被动变更的物料更新时间
