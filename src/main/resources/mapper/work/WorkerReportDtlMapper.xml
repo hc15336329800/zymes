@@ -8,7 +8,47 @@
         updated_time, created_by, created_time
     </sql>
 
-
+    <!-- 新增：按工人汇总工资 -->
+    <select id="summaryByUser"
+            resultType="cn.jb.boot.biz.work.dto.WorkerReportSalarySummaryDTO">
+        select
+        twrd.user_id       as userId,
+        ui.nick_name       as userName,
+        cast(sum(twrd.user_count * two.hours_fixed) as char) as totalWages
+        from t_worker_report_dtl twrd
+        inner join t_work_order two on twrd.work_order_id = two.id
+        left join sys_user_info ui on twrd.user_id = ui.id
+        <where>
+            <if test="procedureNames != null and procedureNames.size() > 0">
+                and two.procedure_name in
+                <foreach collection="procedureNames" item="name"
+                         open="(" close=")" separator=",">
+                    #{name}
+                </foreach>
+            </if>
+            <if test="workOrderNo != null and workOrderNo != ''">
+                and two.work_order_no like concat('%', #{workOrderNo}, '%')
+            </if>
+            <if test="itemNo != null and itemNo != ''">
+                and two.item_no = #{itemNo}
+            </if>
+            <if test="userId != null and userId != ''">
+                and twrd.user_id = #{userId}
+            </if>
+            <if test="beginTime != null and  beginTime != ''">
+                and twrd.created_time &gt;=
+                STR_TO_DATE(concat(#{beginTime,jdbcType=VARCHAR}, ' 00:00:00'),
+                '%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test="endTime != null and  endTime != ''">
+                and twrd.created_time &lt;=
+                STR_TO_DATE(concat(#{endTime,jdbcType=VARCHAR}, ' 23:59:59'),
+                '%Y-%m-%d %H:%i:%s')
+            </if>
+        </where>
+        group by twrd.user_id, ui.nick_name
+        order by twrd.user_id
+    </select>
 
     <!-- 查询所有（不分页，导出用）
          导出工人报工工资明细（按条件查询并导出Excel） -->

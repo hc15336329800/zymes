@@ -1,7 +1,9 @@
 package cn.jb.boot.biz.work.service;
 
+import cn.hutool.poi.excel.ExcelWriter;
 import cn.jb.boot.biz.sales.vo.request.ComIdsReq;
 import cn.jb.boot.biz.sales.vo.request.DeliveryMainPageReq;
+import cn.jb.boot.biz.work.dto.WorkerReportSalarySummaryDTO;
 import cn.jb.boot.biz.work.entity.WorkerReportDtl;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDetailPageRequest;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDtlPageRequest;
@@ -23,6 +25,10 @@ import java.util.List;
  */
 public interface WorkerReportDtlService extends IService<WorkerReportDtl> {
 
+
+
+  /** 导出工人工资汇总（带时间范围参数） */
+  void downloadSalarySummary(WorkerReportDetailPageRequest params, HttpServletResponse response);
 
     /**
      * 分页查询

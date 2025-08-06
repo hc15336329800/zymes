@@ -1,6 +1,7 @@
 package cn.jb.boot.biz.work.mapper;
 
 import cn.jb.boot.biz.work.dto.WorkerReportSalaryExportDTO;
+import cn.jb.boot.biz.work.dto.WorkerReportSalarySummaryDTO;
 import cn.jb.boot.biz.work.entity.WorkerReportDtl;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDetailPageRequest;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDtlPageRequest;
@@ -28,6 +29,10 @@ public interface WorkerReportDtlMapper extends BaseMapper<WorkerReportDtl> {
 
     List<WorkerReportSalaryExportDTO> detailPageListAll(WorkerReportDetailPageRequest params);
 
+
+    /** 新增：按工人汇总工资 */
+    List<WorkerReportSalarySummaryDTO> summaryByUser(
+            WorkerReportDetailPageRequest params);
 
     /**
      * 根据条件分页查询工人报工明细列表
