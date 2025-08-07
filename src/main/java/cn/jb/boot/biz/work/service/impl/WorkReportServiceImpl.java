@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -102,14 +103,82 @@ public class WorkReportServiceImpl extends ServiceImpl<WorkReportMapper, WorkRep
     }
 
 
+
+    //批量更新报工单的验收状态  修复死锁
+    @Override
+    @Transactional(rollbackFor = Throwable.class)
+    public void updateVerifyStatus(ReportUpdateStatusRequest params) {
+        List<String> ids = params.getIds();
+        List<WorkReport> workReports = this.listByIds(ids);
+        List<WorkReport> passList = new ArrayList<>();
+
+        // 关联工单一次性查询并转为 Map
+        List<String> wordIds = workReports.stream()
+                .map(WorkReport::getWorkOrderId).collect(Collectors.toList());
+        Map<String, WorkOrder> map = workOrderService.listByIds(wordIds).stream()
+                .collect(Collectors.toMap(WorkOrder::getId, Function.identity()));
+
+        List<WorkReport> upList = new ArrayList<>();
+        List<WorkOrder> upWoList = new ArrayList<>();
+
+        for (WorkReport wr : workReports) {
+            if (ReportStatus.TO_REVIEW.getCode().equals(wr.getStatus())) {
+                wr.setStatus(params.getStatus());
+                wr.setRemark(params.getMessage());
+                wr.setVerifyUser(UserUtil.uid());
+                wr.setVerifyTime(LocalDateTime.now());
+
+                WorkOrder workOrder = map.get(wr.getWorkOrderId());
+
+                if (ReportStatus.REVIEW_PASS.getCode().equals(params.getStatus())) {
+                    wr.setPid(workOrder.getAllocId());
+                    WorkOrder wo = new WorkOrder();
+                    wo.setId(workOrder.getId());
+                    wo.setToReviewRealCount(ArithUtil.sub(workOrder.getToReviewRealCount(), wr.getRealCount()));
+                    wo.setToReviewDeffCount(ArithUtil.sub(workOrder.getToReviewDeffCount(), wr.getDeffCount()));
+                    wo.setRealCount(ArithUtil.add(workOrder.getRealCount(), wr.getRealCount()));
+                    wo.setDeffCount(ArithUtil.add(workOrder.getDeffCount(), wr.getDeffCount()));
+                    upWoList.add(wo);
+                    passList.add(wr);
+                }
+
+                if (ReportStatus.REVIEW_REJECT.getCode().equals(params.getStatus())) {
+                    WorkOrder wo = new WorkOrder();
+                    wo.setId(workOrder.getId());
+                    wo.setToReviewRealCount(ArithUtil.sub(workOrder.getToReviewRealCount(), wr.getRealCount()));
+                    upWoList.add(wo);
+                }
+
+                upList.add(wr);
+            }
+        }
+
+        // 统一按 ID 升序排序后批量更新工单，避免死锁
+        if (!upWoList.isEmpty()) {
+            upWoList.sort(Comparator.comparing(WorkOrder::getId));
+            workOrderService.updateBatchById(upWoList);
+        }
+
+        // 批量更新报工
+        if (!upList.isEmpty()) {
+            this.updateBatchById(upList);
+        }
+
+        // 验收通过的报工单异步处理
+        if (!passList.isEmpty()) {
+            ThreadPool.singleExecute(() -> procAllocationManager.updateWorkReport(passList));
+        }
+    }
+
+
+
     /**
      * 批量更新报工单的验收状态，并同步更新关联工单的相关数量字段。
      * 注：本方法不涉及 t_work_report_dtl（明细表）插入，仅主表和工单表。
      * @param params 验收状态修改参数（包含报工ID、目标状态、备注等）
      */
-    @Override
     @Transactional(rollbackFor = Throwable.class)
-    public void updateVerifyStatus(ReportUpdateStatusRequest params) {
+    public void updateVerifyStatusV1(ReportUpdateStatusRequest params) {
         // 1. 获取所有待处理报工ID
         List<String> ids = params.getIds();
         // 2. 批量查询报工记录
