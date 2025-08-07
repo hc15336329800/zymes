@@ -431,6 +431,9 @@ public class PojoUtil {
      * @return 复制后的数据集
      */
     private static <R, T> List<T> copy(List<R> resources, T target, Class<T> clazz, BiConsumer<R, T> consumer) {
+        if (resources == null || resources.isEmpty()) {
+            return Collections.emptyList();
+        }
         List<T> list = new ArrayList<>();
         try {
             T t;

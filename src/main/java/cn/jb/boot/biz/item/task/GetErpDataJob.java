@@ -29,31 +29,24 @@ public class GetErpDataJob {
 	private MesToErpDataService mesToErpDataService;
 
 	@Resource
-	private GetMesDataJob getMesDataJob; // 新增：注入 GetMesDataJob
+	private GetMesDataJob getMesDataJob;
+
+	private volatile boolean runningErp = false;
+
+	private volatile boolean runningMes = false;
 
 
-	private volatile boolean runningErp = false; // 防止重复执行标志位
-
-	private volatile boolean runningMes = false; // 防止重复执行标志位
-
-
-	private volatile boolean runningMesAll = false; // 防止重复执行标志位  全量
-
+	private volatile boolean runningMesAll = false;
 
 
 
 
-	//===========================自动定时全同步==================================
-
-	/**
-	 *   整体自动同步方法
-	 */
 	//===========================自动定时全同步==================================
 
 	/**
 	 * 整体ERP同步方法 外部
 	 */
-	@Scheduled(cron = "0 0/5 * * * ?")
+//	@Scheduled(cron = "0 0/5 * * * ?")
 	public void syncErpToMesAll() {
 		if (runningErp) {
 			log.warn("======【ERP同步任务正在执行，跳过本次调度】======");
@@ -126,7 +119,7 @@ public class GetErpDataJob {
 	/**
 	 * 整体MES构建方法   (2025-03 k开始构建bom ,   工序构建为最近一小时)
 	 */
-    @Scheduled(cron = "0 0/10 * * * ?")
+//    @Scheduled(cron = "0 0/10 * * * ?")
 	public void syncErpToMesAll007() {
 		if (runningMes) {
 			log.warn("======【MES构建任务正在执行，跳过本次调度】======");
@@ -144,9 +137,9 @@ public class GetErpDataJob {
 
 
 		//mes工序  （工序构建为最近一小时）
-		DateTimeFormatter onTime = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"); // 格式化模板
-		LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1); // 当前时间减去一小时
-		String processStr = oneHourAgo.format(onTime); // 得到一小时前的时间字符串
+		DateTimeFormatter onTime = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+		LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
+		String processStr = oneHourAgo.format(onTime);
 
 		System.out.println(String.format("======【起始时间】%s======", processStr));
 
@@ -265,7 +258,7 @@ public class GetErpDataJob {
 	private volatile String startTime = "2025-06-01 00:00:00";
 
 	/**
-	 * ERP基础数据同步  oracle数据库  原始
+	 * ERP基础数据同步  oracle数据库
 	 */
 //	@Scheduled(cron = "0 0/30 * * * ?")
 	public void synchronousFromErp() {
