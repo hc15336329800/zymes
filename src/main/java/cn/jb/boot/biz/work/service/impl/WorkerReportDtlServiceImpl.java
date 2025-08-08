@@ -20,6 +20,15 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import cn.hutool.poi.excel.ExcelWriter;
+import cn.jb.boot.util.FileUtil;
+import java.io.ByteArrayOutputStream;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
 
 /**
  * 工人报工明细 服务实现类
@@ -35,6 +44,34 @@ public class WorkerReportDtlServiceImpl extends ServiceImpl<WorkerReportDtlMappe
 	@Resource
 	private WorkerReportDtlMapper mapper;
 
+
+	/**
+	 * 导出全部工人报工工资明细（按时间范围，过滤工资为 0 或为空的记录）
+	 */
+	public void downloadAllSalary(WorkerReportDetailPageRequest params, HttpServletResponse response) {
+		try {
+			List<WorkerReportSalaryExportDTO> list = mapper.detailPageListAll(params).stream()
+					.filter(dto -> {
+						try {
+							return dto.getWages() != null
+									&& Double.parseDouble(dto.getWages()) > 0;
+						} catch (Exception e) {
+							return false;
+						}
+					})
+					.collect(Collectors.toList());
+
+			ExcelUtil.writeExcel(response, "工人工资明细", w -> {
+				w.renameSheet(0, "工资明细");
+				writeSalaryData(w, list);
+			});
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw e;
+		}
+	}
+
+
 	// 查询当日工资
 	@Override
 	public BaseResponse<List<WorkerReportDtlPageResponse>> pageInfo(Paging page, WorkerReportDtlPageRequest params) {
@@ -47,6 +84,55 @@ public class WorkerReportDtlServiceImpl extends ServiceImpl<WorkerReportDtlMappe
 		PageUtil<WorkerReportDtlPageResponse, WorkerReportDetailPageRequest> pu = (p, q) -> mapper.detailPageList(p, q);
 		return pu.page(page, params);
 	}
+
+
+	/**
+	 * 导出全部工人报工工资明细（过滤掉工资为 0，按人分文件打包 ZIP）
+	 */
+	public void downloadAllSalaryZip(WorkerReportDetailPageRequest params,
+									 HttpServletResponse response) {
+		try {
+			// 查询全部工资明细并过滤工资 <= 0 的记录
+			List<WorkerReportSalaryExportDTO> all =
+					mapper.detailPageListAll(params).stream()
+							.filter(dto -> {
+								try {
+									return dto.getWages() != null
+											&& Double.parseDouble(dto.getWages()) > 0;
+								} catch (Exception e) {
+									return false;
+								}
+							}).collect(Collectors.toList());
+
+			// 按工人分组
+			Map<String, List<WorkerReportSalaryExportDTO>> group =
+					all.stream().collect(Collectors.groupingBy(WorkerReportSalaryExportDTO::getUserName));
+
+			// 设置 ZIP 响应头并输出
+			FileUtil.download(response, "工人工资明细.zip", null, bos -> {
+				try (ZipOutputStream zos = new ZipOutputStream(bos)) {
+					for (Map.Entry<String, List<WorkerReportSalaryExportDTO>> entry : group.entrySet()) {
+						ByteArrayOutputStream baos = new ByteArrayOutputStream();
+						try (ExcelWriter writer = cn.hutool.poi.excel.ExcelUtil.getWriter(true)) {
+							writer.renameSheet(0, "工资明细");
+							writeSalaryData(writer, entry.getValue());
+							writer.flush(baos, true);
+						}
+						zos.putNextEntry(new ZipEntry(entry.getKey() + ".xlsx"));
+						zos.write(baos.toByteArray());
+						zos.closeEntry();
+					}
+					zos.finish();
+				} catch (Exception e) {
+					throw new RuntimeException(e);
+				}
+			});
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw e;
+		}
+	}
+
 
 
 	/**

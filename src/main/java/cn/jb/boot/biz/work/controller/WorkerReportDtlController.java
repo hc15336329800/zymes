@@ -78,6 +78,17 @@ public class WorkerReportDtlController {
 
 
 	/**
+	 * 导出全部工人报工工资明细（按条件，过滤工资为 0 的记录，压缩为 ZIP）
+	 */
+	@PostMapping("/download_salary_all")
+	@Operation(summary = "导出所有工人的工资明细")
+	public void downloadSalaryAll(@RequestBody @Valid WorkerReportDetailPageRequest request,
+								  HttpServletResponse response) {
+		iservice.downloadAllSalaryZip(request, response);
+	}
+
+
+	/**
 	 * 新增：下载工资汇总
 	 */
 	@PostMapping("/download_salary_summary")
