@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -86,54 +87,52 @@ public class WorkerReportDtlServiceImpl extends ServiceImpl<WorkerReportDtlMappe
 	}
 
 
+
+
 	/**
-	 * 导出全部工人报工工资明细（过滤掉工资为 0，按人分文件打包 ZIP）
+	 * 导出全部工资明细（按条件过滤工资<=0的记录，按人分文件打包 ZIP）
 	 */
 	public void downloadAllSalaryZip(WorkerReportDetailPageRequest params,
-									 HttpServletResponse response) {
+									 HttpServletResponse response) throws IOException {
 		try {
-			// 查询全部工资明细并过滤工资 <= 0 的记录
-			List<WorkerReportSalaryExportDTO> all =
-					mapper.detailPageListAll(params).stream()
-							.filter(dto -> {
-								try {
-									return dto.getWages() != null
-											&& Double.parseDouble(dto.getWages()) > 0;
-								} catch (Exception e) {
-									return false;
-								}
-							}).collect(Collectors.toList());
-
-			// 按工人分组
-			Map<String, List<WorkerReportSalaryExportDTO>> group =
-					all.stream().collect(Collectors.groupingBy(WorkerReportSalaryExportDTO::getUserName));
-
-			// 设置 ZIP 响应头并输出
-			FileUtil.download(response, "工人工资明细.zip", null, bos -> {
-				try (ZipOutputStream zos = new ZipOutputStream(bos)) {
-					for (Map.Entry<String, List<WorkerReportSalaryExportDTO>> entry : group.entrySet()) {
-						ByteArrayOutputStream baos = new ByteArrayOutputStream();
-						try (ExcelWriter writer = cn.hutool.poi.excel.ExcelUtil.getWriter(true)) {
-							writer.renameSheet(0, "工资明细");
-							writeSalaryData(writer, entry.getValue());
-							writer.flush(baos, true);
+			// 1. 查询并过滤工资 > 0 的记录
+			List<WorkerReportSalaryExportDTO> data = mapper.detailPageListAll(params).stream()
+					.filter(dto -> {
+						try {
+							return dto.getWages() != null
+									&& Double.parseDouble(dto.getWages()) > 0;
+						} catch (Exception e) {
+							return false;
 						}
-						zos.putNextEntry(new ZipEntry(entry.getKey() + ".xlsx"));
-						zos.write(baos.toByteArray());
-						zos.closeEntry();
+					}).collect(Collectors.toList());
+
+			// 2. 先在内存中构造 ZIP
+			ByteArrayOutputStream zipBaos = new ByteArrayOutputStream();
+			try (ZipOutputStream zos = new ZipOutputStream(zipBaos)) {
+				Map<String, List<WorkerReportSalaryExportDTO>> group =
+						data.stream().collect(Collectors.groupingBy(WorkerReportSalaryExportDTO::getUserName));
+
+				for (Map.Entry<String, List<WorkerReportSalaryExportDTO>> entry : group.entrySet()) {
+					ByteArrayOutputStream excelBaos = new ByteArrayOutputStream();
+					try (ExcelWriter writer = cn.hutool.poi.excel.ExcelUtil.getWriter(true)) {
+						writer.renameSheet(0, "工资明细");
+						writeSalaryData(writer, entry.getValue());
+						writer.flush(excelBaos, true);          // 写入 Excel 到内存
 					}
-					zos.finish();
-				} catch (Exception e) {
-					throw new RuntimeException(e);
+					zos.putNextEntry(new ZipEntry(entry.getKey() + ".xlsx"));
+					zos.write(excelBaos.toByteArray());
+					zos.closeEntry();
 				}
-			});
+				zos.finish();
+			}
+
+			// 3. 输出到客户端
+			FileUtil.download(response, "工人工资明细.zip", zipBaos.toByteArray(), null);
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw e;
 		}
 	}
-
-
 
 	/**
 	 * 修改：按请求参数导出工资汇总
