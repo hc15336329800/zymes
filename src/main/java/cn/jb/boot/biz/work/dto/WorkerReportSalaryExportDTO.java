@@ -7,10 +7,10 @@ import java.io.Serializable;
 public class WorkerReportSalaryExportDTO implements Serializable {
 	private String orderNo;        // 订单号
 	private String workOrderNo;    // 工单号
-//	private String bomNo;          // 图纸号
+	private String bomNo;          // 图纸号
 	private String itemNo;         // 产品编码
 	private String procedureName;  // 工序名称
-	private String userId;         // 工人ID
+//	private String userId;         // 工人ID
 	private String userName;       // 工人姓名
 
 	private String userCount;      // 加工件数

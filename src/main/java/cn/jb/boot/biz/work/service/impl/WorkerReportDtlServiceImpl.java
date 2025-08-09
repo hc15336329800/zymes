@@ -194,12 +194,12 @@ public class WorkerReportDtlServiceImpl extends ServiceImpl<WorkerReportDtlMappe
 	private void writeSalaryData(ExcelWriter writer, List<WorkerReportSalaryExportDTO> list) {
 
 		writer.addHeaderAlias("orderNo", "订单号");
-//        writer.addHeaderAlias("bomNo", "图纸号");
-		writer.addHeaderAlias("itemNo", "产品号");
+        writer.addHeaderAlias("bomNo", "图纸号");
+//		writer.addHeaderAlias("itemNo", "产品号");
 		writer.addHeaderAlias("workOrderNo", "工单号");
 		writer.addHeaderAlias("procedureName", "工序名称");
 
-		writer.addHeaderAlias("userId", "工人ID");
+//		writer.addHeaderAlias("userId", "工人ID");
 		writer.addHeaderAlias("userName", "工人姓名");
 
 		writer.addHeaderAlias("userCount", "加工件数");

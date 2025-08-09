@@ -103,8 +103,8 @@
         cast(twrd.user_count * two.hours_fixed as char) as wages, -- 工资 = 工时数 * 单价
         two.hours_fixed as hoursFixed,                       -- 单价
         two.procedure_name as procedureName,                 -- 工序名称
-        two.item_no as itemNo,                               -- 产品编码
-#         two.bom_no as bomNo,                                 -- 图纸号（如字段不同需调整）
+#         two.item_no as itemNo,                               -- 产品编码
+        two.bom_no as bomNo,                                 -- 图纸号（如字段不同需调整）
         twrd.created_time as createdTime,                    -- 报工时间（yyyy-MM-dd HH:mm:ss）
         two.work_order_no as workOrderNo,                    -- 工单号
         tod.order_no as orderNo                              -- 订单号

@@ -92,8 +92,12 @@ public class WorkerReportDtlController {
 	/**
 	 * 导出全部工人的工资明细  都输出到一张表中
 	 */
-	 // todo :新街口 需要实现
-
+		@PostMapping("/download_salary_all_table")
+	@Operation(summary = "导出全部工人的工资明细（单表）")
+	public void downloadSalaryAllTable(@RequestBody @Valid WorkerReportDetailPageRequest request,
+									   HttpServletResponse response) {
+		iservice.downloadAllSalary(request, response);
+	}
 
 	/**
 	 * 新增：下载工资汇总
