@@ -6,7 +6,7 @@ import java.io.Serializable;
 @Data
 public class WorkerReportSalaryExportDTO implements Serializable {
 	private String orderNo;        // 订单号
-	private String workOrderNo;    // 工单号
+//	private String workOrderNo;    // 工单号
 	private String bomNo;          // 图纸号
 	private String itemNo;         // 产品编码
 	private String procedureName;  // 工序名称

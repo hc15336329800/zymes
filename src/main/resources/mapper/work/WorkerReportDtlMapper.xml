@@ -104,12 +104,14 @@
         two.hours_fixed as hoursFixed,                       -- 单价
         two.procedure_name as procedureName,                 -- 工序名称
 #         two.item_no as itemNo,                               -- 产品编码
-        two.bom_no as bomNo,                                 -- 图纸号（如字段不同需调整）
+        mis.bom_no as bomNo,              -- ← 改为从 mes_item_stock 获取
         twrd.created_time as createdTime,                    -- 报工时间（yyyy-MM-dd HH:mm:ss）
         two.work_order_no as workOrderNo,                    -- 工单号
         tod.order_no as orderNo                              -- 订单号
         from t_worker_report_dtl twrd
         inner join t_work_order two on twrd.work_order_id = two.id        -- 工单表
+        left join mes_item_stock mis on two.item_no = mis.item_no   -- ← 新增联表
+
         left join t_order_dtl tod on two.order_dtl_id = tod.id            -- 订单明细表
         left join sys_user_info ui on twrd.user_id = ui.id                -- 用户表
         <!-- 如 bomNo 字段不在 t_work_order，请根据实际业务 left join 物料/BOM 表，并取别名 -->
