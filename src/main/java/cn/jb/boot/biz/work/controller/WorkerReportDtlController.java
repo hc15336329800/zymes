@@ -79,14 +79,21 @@ public class WorkerReportDtlController {
 
 
 	/**
-	 * 导出全部工人的工资明细（按时间过滤，工资 > 0）
+	 * 导出全部工人的工资明细压缩包（按时间过滤，工资 > 0）
 	 */
-	@PostMapping("/download_salary_all")
+	@PostMapping("/download_salary_all_zip")
 	@Operation(summary = "导出全部工人的工资明细")
-	public void downloadSalaryAll(@RequestBody @Valid WorkerReportDetailPageRequest request,
+	public void downloadSalaryAllZip(@RequestBody @Valid WorkerReportDetailPageRequest request,
 								  HttpServletResponse response) throws IOException {
 		iservice.downloadAllSalaryZip(request, response);
 	}
+
+
+	/**
+	 * 导出全部工人的工资明细  都输出到一张表中
+	 */
+	 // todo :新街口 需要实现
+
 
 	/**
 	 * 新增：下载工资汇总
