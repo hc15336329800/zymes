@@ -298,12 +298,16 @@ public class OrderService {
 
 		// 2. 查询物料名称
 		String itemName = null;
+		String bomNo = null;
 		if (StringUtils.isNotBlank(order.getItemNo())) {
 			MesItemStock stock = mesItemStockMapper.selectOne(
 					new LambdaQueryWrapper<MesItemStock>()
 							.eq(MesItemStock::getItemNo, order.getItemNo())
 			);
-			itemName = stock != null ? stock.getItemName() : null;
+			if (stock != null) {
+				itemName = stock.getItemName();
+				bomNo = stock.getBomNo();
+			}
 		}
 
 		// 3. 查询该销售单对应的所有 place 审批记录
@@ -322,6 +326,8 @@ public class OrderService {
 			dto.setCustName(order.getCustName());
 			dto.setItemNo(order.getItemNo());
 			dto.setItemName(itemName);
+			dto.setBomNo(bomNo);
+
 			dto.setNeedNum(order.getNeedNum());
 			dto.setOrderStatus(order.getOrderStatus());
 

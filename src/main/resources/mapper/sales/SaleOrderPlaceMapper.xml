@@ -94,7 +94,9 @@
         s.need_num,
         s.order_status,
         s.procedure_name,
-        i.item_name
+        i.item_name,
+        i.bom_no AS bomNo   <!-- 新增 -->
+
         FROM (
         SELECT *,
         ROW_NUMBER() OVER (PARTITION BY order_no ORDER BY created_time DESC) AS rn

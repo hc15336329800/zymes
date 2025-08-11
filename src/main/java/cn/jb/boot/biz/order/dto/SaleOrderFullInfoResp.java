@@ -17,6 +17,7 @@ public class SaleOrderFullInfoResp {
 	private String orderNo; //销售单号
 	private String custName; //客户名
 	private String itemNo; //物料号
+	private String bomNo;         // 新增：BOM 编码
 	private String itemName; //物料名称
 	private BigDecimal needNum; //数量
 	private String orderStatus; //是否已下单
