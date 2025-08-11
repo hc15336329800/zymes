@@ -8,7 +8,7 @@
     </sql>
 
     <select id="pageInfo" resultType="cn.jb.boot.biz.work.vo.response.WorkAssignPageResponse"
-            parameterType="cn.jb.boot.biz.work.vo.request.WorkAssignPageRequest">
+            parameterType="map">
         select
         tws.id,two.work_order_no,two.device_id,two.dept_id,tws.created_time,tws.created_By,two.procedure_name,tws.assign_count,two.plan_total_count,two.item_no
         from t_work_assign tws inner join t_work_order two on two.id=tws.work_order_id
@@ -24,6 +24,10 @@
             </if>
             <if test="p.itemNo != null and p.itemNo != ''">
                 and two.item_no=#{p.itemNo}
+            </if>
+            <!-- 新增：图纸号（bomNo）条件 -->
+            <if test="p.bomNo != null and p.bomNo != ''">
+                and two.bom_no like concat('%',#{p.bomNo},'%')
             </if>
             <if test="p.procedureNames != null and p.procedureNames.size()>0 ">
                 and two.procedure_name

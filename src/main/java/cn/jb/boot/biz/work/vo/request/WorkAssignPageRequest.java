@@ -32,6 +32,10 @@ public class WorkAssignPageRequest implements Serializable {
     private String deviceId;
     @Schema(description = "产品编码")
     private String itemNo;
+
+    @Schema(description = "图纸号")
+    private String bomNo;
+
     @Schema(description = "工序名称")
     private List<String> procedureNames;
 
