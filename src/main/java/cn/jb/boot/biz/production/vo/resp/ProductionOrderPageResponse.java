@@ -101,4 +101,9 @@ public class ProductionOrderPageResponse implements Serializable {
     private String procedureName;
     @Schema(description = "是否外协")
     private String outerState;
+
+    /** 新增：订单创建时间 */
+    @Schema(description = "订单创建时间")
+    @JsonFormat(pattern = DateUtil.YYYY_MM_DD_HH_MM_SS)
+    private LocalDateTime createdTime;
 }

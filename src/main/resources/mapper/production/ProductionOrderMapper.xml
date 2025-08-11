@@ -23,6 +23,7 @@
         p.updated_by,
         p.updated_time,
         p.created_by,
+        p.created_time AS createdTime,   <!-- 新增别名 -->
         p.created_time,
         p.order_type,
         s.item_name AS itemName,
