@@ -182,33 +182,80 @@
 
 
     <!--    -&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;&#45;-->
-
-    <select id="pageInfo" resultType="cn.jb.boot.biz.order.vo.response.OrderDtlPageResponse"
+    <!-- OrderDtlMapper.xml 中的 pageInfo 查询 -->
+    <select id="pageInfo"
+            resultType="cn.jb.boot.biz.order.vo.response.OrderDtlPageResponse"
             parameterType="cn.jb.boot.biz.order.vo.request.OrderDtlPageRequest">
-        select
-        <include refid="Base_Column_List"/>
-        from t_order_dtl
+
+        SELECT
+        d.id,
+        d.order_no          AS orderNo,
+        d.item_no           AS itemNo,
+        d.item_count        AS itemCount,
+        IFNULL(SUM(wr.real_count),0) AS productionCount,
+        d.order_dtl_status  AS orderDtlStatus,
+        d.need_mid_count    AS needMidCount,
+        d.updated_by,
+        d.updated_time      AS updatedTime,
+        d.created_by,
+        d.created_time      AS createdTime,
+        mis.bom_no          AS bomNo
+        FROM t_order_dtl d
+        LEFT JOIN mes_item_stock mis
+        ON d.item_no = mis.item_no
+        LEFT JOIN t_work_order wo
+        ON wo.order_dtl_id = d.id
+        LEFT JOIN t_work_report wr
+        ON wr.work_order_id = wo.id AND wr.status = '03'
         <where>
-            <if test="p.childItemNos != null and p.childItemNos.size()>0 != ''">
-                item_no in
-                <foreach collection="p.childItemNos" item="itemNo" index="index" open="(" close=")" separator=",">
+            <if test="p.childItemNos != null and p.childItemNos.size() > 0">
+                d.item_no IN
+                <foreach collection="p.childItemNos" item="itemNo"
+                         open="(" separator="," close=")">
                     #{itemNo}
                 </foreach>
             </if>
-            <if test="p.orderStatus != null and p.orderStatus!= ''">
-                and order_dtl_status =#{p.orderStatus}
+            <if test="p.orderStatus != null and p.orderStatus != ''">
+                AND d.order_dtl_status = #{p.orderStatus}
             </if>
             <if test="p.beginTime != null and p.beginTime != ''">
-                and created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d
-                %H:%i:%s')
+                AND d.created_time &gt;= STR_TO_DATE(CONCAT(#{p.beginTime},' 00:00:00'), '%Y-%m-%d %H:%i:%s')
+
             </if>
             <if test="p.endTime != null and p.endTime != ''">
-                and created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d
-                %H:%i:%s')
+                AND d.created_time &lt;= STR_TO_DATE(CONCAT(#{p.endTime},' 23:59:59'), '%Y-%m-%d %H:%i:%s')
             </if>
         </where>
-        order by created_time desc
+        GROUP BY d.id
+        ORDER BY d.created_time DESC
     </select>
+
+<!--    <select id="pageInfo" resultType="cn.jb.boot.biz.order.vo.response.OrderDtlPageResponse"-->
+<!--            parameterType="cn.jb.boot.biz.order.vo.request.OrderDtlPageRequest">-->
+<!--        select-->
+<!--        <include refid="Base_Column_List"/>-->
+<!--        from t_order_dtl-->
+<!--        <where>-->
+<!--            <if test="p.childItemNos != null and p.childItemNos.size()>0 != ''">-->
+<!--                item_no in-->
+<!--                <foreach collection="p.childItemNos" item="itemNo" index="index" open="(" close=")" separator=",">-->
+<!--                    #{itemNo}-->
+<!--                </foreach>-->
+<!--            </if>-->
+<!--            <if test="p.orderStatus != null and p.orderStatus!= ''">-->
+<!--                and order_dtl_status =#{p.orderStatus}-->
+<!--            </if>-->
+<!--            <if test="p.beginTime != null and p.beginTime != ''">-->
+<!--                and created_time &gt;= STR_TO_DATE(concat(#{p.beginTime,jdbcType=VARCHAR}, ' 00:00:00'),'%Y-%m-%d-->
+<!--                %H:%i:%s')-->
+<!--            </if>-->
+<!--            <if test="p.endTime != null and p.endTime != ''">-->
+<!--                and created_time &lt;= STR_TO_DATE(concat(#{p.endTime,jdbcType=VARCHAR}, ' 23:59:59'),'%Y-%m-%d-->
+<!--                %H:%i:%s')-->
+<!--            </if>-->
+<!--        </where>-->
+<!--        order by created_time desc-->
+<!--    </select>-->
     <select id="selectCurrentMonth" resultType="cn.jb.boot.biz.order.entity.OrderDtl">
         select
         <include refid="Base_Column_List"/>

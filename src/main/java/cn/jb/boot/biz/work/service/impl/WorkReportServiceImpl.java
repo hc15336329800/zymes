@@ -1,6 +1,9 @@
 package cn.jb.boot.biz.work.service.impl;
 
+import cn.jb.boot.biz.item.service.MidItemStockService;
+import cn.jb.boot.biz.order.entity.OrderDtl;
 import cn.jb.boot.biz.order.manager.ProcAllocationManager;
+import cn.jb.boot.biz.order.service.OrderDtlService;
 import cn.jb.boot.biz.work.entity.WorkOrder;
 import cn.jb.boot.biz.work.entity.WorkReport;
 import cn.jb.boot.biz.work.enums.ReportStatus;
@@ -17,12 +20,14 @@ import cn.jb.boot.util.ArithUtil;
 import cn.jb.boot.util.PageUtil;
 import cn.jb.boot.util.ThreadPool;
 import cn.jb.boot.util.UserUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -30,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import cn.jb.boot.biz.item.entity.MidItemStock;
 
 /**
  * 工单报工表 服务实现类
@@ -48,8 +54,11 @@ public class WorkReportServiceImpl extends ServiceImpl<WorkReportMapper, WorkRep
     private ProcAllocationManager procAllocationManager;
     @Resource
     private WorkOrderService workOrderService;
-
-
+    // 新增依赖
+    @Resource
+    private MidItemStockService midItemStockService;
+    @Resource
+    private OrderDtlService orderDtlService;
     @Override
     public BaseResponse<List<WorkReportPageResponse>> pageInfo(Paging page, WorkReportPageRequest params) {
         PageUtil<WorkReportPageResponse, WorkReportPageRequest> pu = (p, q) -> mapper.pageInfo(p, q);
@@ -103,8 +112,85 @@ public class WorkReportServiceImpl extends ServiceImpl<WorkReportMapper, WorkRep
     }
 
 
+    //批量更新报工单的验收状态    新增0812 ：更新已生产数量   (微测试  感觉不太行)
+    //  当执行    @PostMapping("/update_verify_status") 报工验收接口的时候。  需要根据bom号查询t_mid_item_stock的last_flag字段是否为01（表示最后一个工序）。是的话  t_order_dtl表的production_count（已生产数量）字段  进行+1
+//    @Override
+//    @Transactional(rollbackFor = Throwable.class)
+//    public void updateVerifyStatus(ReportUpdateStatusRequest params) {
+//        List<String> ids = params.getIds();
+//        List<WorkReport> workReports = this.listByIds(ids);
+//        List<WorkReport> passList = new ArrayList<>();
+//
+//        List<String> wordIds = workReports.stream()
+//                .map(WorkReport::getWorkOrderId).collect(Collectors.toList());
+//        Map<String, WorkOrder> map = workOrderService.listByIds(wordIds).stream()
+//                .collect(Collectors.toMap(WorkOrder::getId, Function.identity()));
+//
+//        List<WorkReport> upList = new ArrayList<>();
+//        List<WorkOrder> upWoList = new ArrayList<>();
+//
+//        for (WorkReport wr : workReports) {
+//            if (ReportStatus.TO_REVIEW.getCode().equals(wr.getStatus())) {
+//                wr.setStatus(params.getStatus());
+//                wr.setRemark(params.getMessage());
+//                wr.setVerifyUser(UserUtil.uid());
+//                wr.setVerifyTime(LocalDateTime.now());
+//
+//                WorkOrder workOrder = map.get(wr.getWorkOrderId());
+//
+//                if (ReportStatus.REVIEW_PASS.getCode().equals(params.getStatus())) {
+//                    wr.setPid(workOrder.getAllocId());
+//                    WorkOrder wo = new WorkOrder();
+//                    wo.setId(workOrder.getId());
+//                    wo.setToReviewRealCount(ArithUtil.sub(workOrder.getToReviewRealCount(), wr.getRealCount()));
+//                    wo.setToReviewDeffCount(ArithUtil.sub(workOrder.getToReviewDeffCount(), wr.getDeffCount()));
+//                    wo.setRealCount(ArithUtil.add(workOrder.getRealCount(), wr.getRealCount()));
+//                    wo.setDeffCount(ArithUtil.add(workOrder.getDeffCount(), wr.getDeffCount()));
+//                    upWoList.add(wo);
+//                    passList.add(wr);
+//
+//                    // 仅在最后一道工序时，更新订单明细的已生产数量
+//                    MidItemStock mid = midItemStockService.getOne(
+//                            new LambdaQueryWrapper<MidItemStock>()
+//                                    .eq(MidItemStock::getItemNo, workOrder.getItemNo())
+//                                    .eq(MidItemStock::getProcedureCode, workOrder.getProcedureCode()));
+//                    if (mid != null && "01".equals(mid.getLastFlag())) {
+//                        OrderDtl dtl = orderDtlService.getById(workOrder.getOrderDtlId());
+//                        if (dtl != null) {
+//                            OrderDtl upDtl = new OrderDtl();
+//                            upDtl.setId(dtl.getId());
+//                            upDtl.setProductionCount(
+//                                    ArithUtil.add(dtl.getProductionCount(), BigDecimal.ONE));
+//                            orderDtlService.updateById(upDtl);
+//                        }
+//                    }
+//                }
+//
+//                if (ReportStatus.REVIEW_REJECT.getCode().equals(params.getStatus())) {
+//                    WorkOrder wo = new WorkOrder();
+//                    wo.setId(workOrder.getId());
+//                    wo.setToReviewRealCount(
+//                            ArithUtil.sub(workOrder.getToReviewRealCount(), wr.getRealCount()));
+//                    upWoList.add(wo);
+//                }
+//                upList.add(wr);
+//            }
+//        }
+//
+//        if (!upWoList.isEmpty()) {
+//            upWoList.sort(Comparator.comparing(WorkOrder::getId));
+//            workOrderService.updateBatchById(upWoList);
+//        }
+//        if (!upList.isEmpty()) {
+//            this.updateBatchById(upList);
+//        }
+//        if (!passList.isEmpty()) {
+//            ThreadPool.singleExecute(() -> procAllocationManager.updateWorkReport(passList));
+//        }
+//    }
+//
 
-    //批量更新报工单的验收状态  修复死锁
+//    批量更新报工单的验收状态  修复死锁
     @Override
     @Transactional(rollbackFor = Throwable.class)
     public void updateVerifyStatus(ReportUpdateStatusRequest params) {

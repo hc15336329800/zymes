@@ -350,6 +350,13 @@ public class WorkOrderServiceImpl extends ServiceImpl<WorkOrderMapper, WorkOrder
         for (WorkReportCreateRequest params : requestList) {
             String workOrderId = params.getWorkOrderId();
 
+            // 新增校验：正品和次品数量均为 0 时，直接跳过
+            if ((params.getRealCount() == null || params.getRealCount().compareTo(BigDecimal.ZERO) == 0) &&
+                    (params.getDeffCount() == null || params.getDeffCount().compareTo(BigDecimal.ZERO) == 0)) {
+                log.info("工单 {} 报工数量为 0，跳过处理", workOrderId);
+                continue;
+            }
+
             try {
                 // 获取工单信息
                  wo = this.getById(workOrderId);
