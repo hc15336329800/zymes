@@ -7,15 +7,23 @@
         id, work_order_id, item_count, updated_by, updated_time, created_by, created_time
     </sql>
 
-    <select id="pageInfo" resultType="cn.jb.boot.biz.work.vo.response.WorkOrderRecordPageResponse"
-            parameterType="cn.jb.boot.biz.work.vo.request.WorkOrderRecordPageRequest">
-        select two.work_order_no,twor.item_count,twor.created_time,two.dept_id,two.device_id,two.shift_type,two.item_no,
-        two.real_count,two.deff_count,
-        sui.nick_name as worker_name,
-        twor.created_by,two.procedure_name
+    <select id="pageInfo" resultType="cn.jb.boot.biz.work.vo.response.WorkOrderRecordPageResponse"    parameterType="cn.jb.boot.biz.work.vo.request.WorkOrderRecordPageRequest">
+
+        select two.work_order_no,
+        twor.item_count,
+        twor.created_time,
+        two.dept_id,
+        two.device_id,
+        two.shift_type,
+        two.item_no,
+        two.real_count,
+        two.deff_count,
+        gi.group_name as group_name,
+        twor.created_by,
+        two.procedure_name
         from t_work_order_record twor
-            inner join t_work_order two on two.id=twor.work_order_id
-        left join sys_user_info sui on sui.id = twor.created_by
+        inner join t_work_order two on two.id = twor.work_order_id
+        left join t_group_info gi on gi.id = two.group_id
 
         <where>
             <if test="p.deviceId != null and p.deviceId != ''">

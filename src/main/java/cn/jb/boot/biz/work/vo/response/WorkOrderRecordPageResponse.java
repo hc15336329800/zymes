@@ -71,4 +71,9 @@ public class WorkOrderRecordPageResponse implements Serializable {
     /** 分配工人姓名 */
     @Schema(description = "工人姓名")
     private String workerName;
+
+
+    /** 指派班组名称 */
+    @Schema(description = "班组名称")
+    private String groupName;
 }
