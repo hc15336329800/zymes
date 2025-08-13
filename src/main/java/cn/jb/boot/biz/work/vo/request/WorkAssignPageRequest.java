@@ -41,4 +41,7 @@ public class WorkAssignPageRequest implements Serializable {
 
     @Schema(description = "工单号")
     private String workOrderNo;
+
+    @Schema(description = "下达人姓名")
+    private String createdByName;
 }

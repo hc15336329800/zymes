@@ -21,6 +21,9 @@ public class OrderDtlPageRequest implements Serializable {
     @Schema(description = "物料名称（模糊查询）")
     private String itemName;
 
+    @Schema(description = "母件BOM编号（顶层BOM）")
+    private String bomNo;
+
     private static final long serialVersionUID = 1L;
 
     @Schema(description = "开始时间 yyyy-MM-dd")
@@ -38,7 +41,7 @@ public class OrderDtlPageRequest implements Serializable {
     private String orderStatus;
 
 
-//    新增分页字段  原生
+//     分页字段  原生
     private Integer pageNum;
     private Integer pageSize;
     private String orderNo;

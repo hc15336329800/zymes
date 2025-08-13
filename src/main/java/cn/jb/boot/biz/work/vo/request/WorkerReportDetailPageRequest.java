@@ -31,6 +31,10 @@ public class WorkerReportDetailPageRequest implements Serializable {
 
     private String itemNo;
 
+    @Schema(description = "BOM编号")
+    private String bomNo;          // 新增字段
+
+
     private List<String> procedureNames;
 
 

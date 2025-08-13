@@ -25,6 +25,7 @@
         FROM t_work_assign tws
         INNER JOIN t_work_order   two ON two.id = tws.work_order_id
         LEFT JOIN  mes_item_stock mis ON mis.item_no = two.item_no
+        LEFT JOIN sys_user_info sui ON sui.id = tws.created_by
         <where>
             <if test="p.workOrderNo != null and p.workOrderNo != ''">
                 AND two.work_order_no LIKE CONCAT('%', #{p.workOrderNo}, '%')
@@ -34,6 +35,9 @@
             </if>
             <if test="p.deptId != null and p.deptId != ''">
                 AND two.dept_id = #{p.deptId}
+            </if>
+            <if test="p.createdByName != null and p.createdByName != ''">
+                AND sui.nick_name LIKE CONCAT('%', #{p.createdByName}, '%')
             </if>
             <if test="p.itemNo != null and p.itemNo != ''">
                 AND two.item_no = #{p.itemNo}
@@ -60,6 +64,7 @@
         </where>
         ORDER BY tws.created_time DESC
     </select>
+
 
 
 
