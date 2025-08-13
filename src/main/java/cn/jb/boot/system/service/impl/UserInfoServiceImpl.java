@@ -300,4 +300,9 @@ public class UserInfoServiceImpl extends ServiceImpl<UserInfoMapper, UserInfo> i
     }
 
 
+    @Override
+    public List<DictListResponse> userInfoAll() {
+        return mapper.userInfoAll();
+    }
+
 }

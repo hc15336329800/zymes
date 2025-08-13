@@ -51,6 +51,18 @@ public class UserInfoController {
     private UserInfoService userInfoService;
 
 
+    /** 查询全部用户列表 （下拉框使用）*/
+    @PostMapping("/userInfoAll")
+    @Operation(summary = "全部用户信息")
+    public BaseResponse<List<DictListResponse>> userInfoAll() {
+        List<DictListResponse> list = userInfoService.userInfoAll();
+        return MsgUtil.ok(list);
+    }
+
+
+//    ====================================================================
+
+
     @PostMapping("/loginUserInfo")
     @Operation(summary = "登录用户的信息")
     public BaseResponse<UserInfoDetailResponse> loginUserInfo() {
@@ -71,6 +83,7 @@ public class UserInfoController {
     public BaseResponse<List<UserInfoPageResponse>> userPageList(@RequestBody @Valid BaseRequest<UserInfoPageRequest> request) {
         return userInfoService.userPageInfo(request);
     }
+
 
     @PostMapping("/userDetail")
     @Operation(summary = "用户详情信息")

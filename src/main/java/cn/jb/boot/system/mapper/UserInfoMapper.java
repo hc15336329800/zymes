@@ -31,4 +31,7 @@ public interface UserInfoMapper extends BaseMapper<UserInfo> {
 
     List<DictListResponse> outerUserSelected();
 
+    /**  ：全部用户列表 */
+    List<DictListResponse> userInfoAll();
+
 }

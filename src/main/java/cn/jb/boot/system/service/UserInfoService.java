@@ -36,6 +36,9 @@ public interface UserInfoService extends IService<UserInfo> {
 
     UserInfoDetailResponse userInfoDetail(String uid);
 
+    /**  ：全部用户列表 */
+    List<DictListResponse> userInfoAll();
+
     BaseResponse<List<UserInfoPageResponse>> userPageInfo(BaseRequest<UserInfoPageRequest> request);
 
     void insertUserInfo(UserInfoCreateRequest params);

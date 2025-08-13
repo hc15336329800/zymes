@@ -40,16 +40,18 @@
                     #{name}
                 </foreach>
             </if>
-            <if test="p.allocStatus !=null and p.allocStatus !=''">
-                and
-                case when #{p.allocStatus} = '00' then total_count > worker_alloc_count
-                when #{p.allocStatus} = '01' then total_count &lt;=0 end
+            <if test="p.allocStatus != null and p.allocStatus != ''">
+                AND (
+                (#{p.allocStatus} = '00' AND IFNULL(total_count,0) > IFNULL(worker_alloc_count,0))
+                OR (#{p.allocStatus} = '01' AND IFNULL(total_count,0) &lt;= 0)
+                )
             </if>
 
 
         </where>
         order by created_time desc
     </select>
+
     <resultMap id="distMap" type="cn.jb.boot.biz.order.vo.response.DistInfoResponse">
         <result column="id" property="id"/>
         <result property="procedureCode" column="procedure_code"/>
