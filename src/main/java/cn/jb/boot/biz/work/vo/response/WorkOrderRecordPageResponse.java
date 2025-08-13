@@ -68,5 +68,7 @@ public class WorkOrderRecordPageResponse implements Serializable {
     @Schema(description = "工序名称")
     private String procedureName;
 
-
+    /** 分配工人姓名 */
+    @Schema(description = "工人姓名")
+    private String workerName;
 }

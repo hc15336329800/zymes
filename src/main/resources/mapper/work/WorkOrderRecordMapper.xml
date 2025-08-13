@@ -11,9 +11,12 @@
             parameterType="cn.jb.boot.biz.work.vo.request.WorkOrderRecordPageRequest">
         select two.work_order_no,twor.item_count,twor.created_time,two.dept_id,two.device_id,two.shift_type,two.item_no,
         two.real_count,two.deff_count,
+        sui.nick_name as worker_name,
         twor.created_by,two.procedure_name
-        from t_work_order_record twor inner join t_work_order two
-        on two.id=twor.work_order_id
+        from t_work_order_record twor
+            inner join t_work_order two on two.id=twor.work_order_id
+        left join sys_user_info sui on sui.id = twor.created_by
+
         <where>
             <if test="p.deviceId != null and p.deviceId != ''">
                 and two.device_id=#{p.deviceId}
