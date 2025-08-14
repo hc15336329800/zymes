@@ -63,32 +63,68 @@ public class GroupInfoServiceImpl extends ServiceImpl<GroupInfoMapper, GroupInfo
         return PojoUtil.copyBean(entity, GroupInfoInfoResponse.class);
     }
 
+//    @Override
+//    @Transactional(rollbackFor = Throwable.class)
+//    public void updateInfo(GroupInfoUpdateRequest params) {
+//        GroupInfo db = this.getById(params.getId());
+//        GroupInfo entity = PojoUtil.copyBean(params, GroupInfo.class);
+//        if (!db.getGroupUid().equals(entity.getGroupUid())) {
+//            GroupDtl dtl = groupDtlMapper.selectOne(new LambdaQueryWrapper<GroupDtl>().eq(GroupDtl::getGroupId, db.getId())
+//                    .eq(GroupDtl::getUserId, db.getGroupUid()));
+//            dtl.setLeaderType(LeaderType.WORKER.getCode());
+//            groupDtlMapper.updateById(dtl);
+//            GroupDtl dtl2 = groupDtlMapper.selectOne(new LambdaQueryWrapper<GroupDtl>().eq(GroupDtl::getGroupId, db.getId())
+//                    .eq(GroupDtl::getUserId, params.getGroupUid()));
+//            if (Objects.isNull(dtl2)) {
+//                dtl = new GroupDtl();
+//                dtl.setGroupId(entity.getId());
+//                dtl.setUserId(params.getGroupUid());
+//                dtl.setPercentage(BigDecimal.ZERO);
+//                dtl.setLeaderType(LeaderType.LEADER.getCode());
+//                groupDtlMapper.insert(dtl);
+//            } else {
+//                dtl.setLeaderType(LeaderType.LEADER.getCode());
+//                groupDtlMapper.updateById(dtl);
+//            }
+//        }
+//        this.updateById(entity);
+//
+//    }
+
     @Override
     @Transactional(rollbackFor = Throwable.class)
     public void updateInfo(GroupInfoUpdateRequest params) {
         GroupInfo db = this.getById(params.getId());
         GroupInfo entity = PojoUtil.copyBean(params, GroupInfo.class);
-        if (!db.getGroupUid().equals(entity.getGroupUid())) {
-            GroupDtl dtl = groupDtlMapper.selectOne(new LambdaQueryWrapper<GroupDtl>().eq(GroupDtl::getGroupId, db.getId())
-                    .eq(GroupDtl::getUserId, db.getGroupUid()));
-            dtl.setLeaderType(LeaderType.WORKER.getCode());
-            groupDtlMapper.updateById(dtl);
-            GroupDtl dtl2 = groupDtlMapper.selectOne(new LambdaQueryWrapper<GroupDtl>().eq(GroupDtl::getGroupId, db.getId())
-                    .eq(GroupDtl::getUserId, params.getGroupUid()));
-            if (Objects.isNull(dtl2)) {
-                dtl = new GroupDtl();
-                dtl.setGroupId(entity.getId());
-                dtl.setUserId(params.getGroupUid());
-                dtl.setPercentage(BigDecimal.ZERO);
-                dtl.setLeaderType(LeaderType.LEADER.getCode());
-                groupDtlMapper.insert(dtl);
-            } else {
-                dtl.setLeaderType(LeaderType.LEADER.getCode());
-                groupDtlMapper.updateById(dtl);
-            }
-        }
-        this.updateById(entity);
 
+        if (!Objects.equals(db.getGroupUid(), entity.getGroupUid())) {
+            // 查询现有组长明细
+            GroupDtl leaderDtl = groupDtlMapper.selectOne(new LambdaQueryWrapper<GroupDtl>()
+                    .eq(GroupDtl::getGroupId, db.getId())
+                    .eq(GroupDtl::getLeaderType, LeaderType.LEADER.getCode()));
+
+            if (leaderDtl != null) {
+                // 直接替换组长的 userId
+                leaderDtl.setUserId(entity.getGroupUid());
+                groupDtlMapper.updateById(leaderDtl);
+            } else {
+                // 若未找到组长记录，则新增一条
+                leaderDtl = new GroupDtl();
+                leaderDtl.setGroupId(db.getId());
+                leaderDtl.setUserId(entity.getGroupUid());
+                leaderDtl.setPercentage(BigDecimal.ZERO);
+                leaderDtl.setLeaderType(LeaderType.LEADER.getCode());
+                groupDtlMapper.insert(leaderDtl);
+            }
+
+            // 删除新组长作为普通成员的记录，避免重复
+            groupDtlMapper.delete(new LambdaQueryWrapper<GroupDtl>()
+                    .eq(GroupDtl::getGroupId, db.getId())
+                    .eq(GroupDtl::getUserId, entity.getGroupUid())
+                    .eq(GroupDtl::getLeaderType, LeaderType.WORKER.getCode()));
+        }
+
+        this.updateById(entity);
     }
 
     @Override
