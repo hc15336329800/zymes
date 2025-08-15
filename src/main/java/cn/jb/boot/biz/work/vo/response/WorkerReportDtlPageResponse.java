@@ -25,6 +25,8 @@ public class WorkerReportDtlPageResponse implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    @Schema(description = "报工明细ID")
+    private String id;               // [新增]
 
     /**
      * 用户ID
@@ -70,5 +72,7 @@ public class WorkerReportDtlPageResponse implements Serializable {
 
     private String orderNo;
 
+    @Schema(description = "备注")
+    private String remark;
 
 }

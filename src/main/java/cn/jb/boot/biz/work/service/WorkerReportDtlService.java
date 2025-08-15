@@ -7,6 +7,7 @@ import cn.jb.boot.biz.work.dto.WorkerReportSalarySummaryDTO;
 import cn.jb.boot.biz.work.entity.WorkerReportDtl;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDetailPageRequest;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDtlPageRequest;
+import cn.jb.boot.biz.work.vo.request.WorkerReportDtlUpdateRequest;
 import cn.jb.boot.biz.work.vo.response.WorkerReportDtlPageResponse;
 import cn.jb.boot.framework.com.request.Paging;
 import cn.jb.boot.framework.com.response.BaseResponse;
@@ -41,6 +42,7 @@ public interface WorkerReportDtlService extends IService<WorkerReportDtl> {
 
     BaseResponse<List<WorkerReportDtlPageResponse>> detailPageList(Paging page, WorkerReportDetailPageRequest params);
 
+  BaseResponse<Boolean> updateWorkerReportDtl(WorkerReportDtlUpdateRequest request);
 
 
     void exportOrder(WorkerReportDtlPageRequest params, HttpServletResponse response);

@@ -279,6 +279,7 @@
     <!--    查询工资明细-->
     <select id="detailPageList" resultType="cn.jb.boot.biz.work.vo.response.WorkerReportDtlPageResponse">
         select
+        twrd.id,
         two.item_no,
         twrd.user_count user_count,
         twrd.user_count * two.hours_fixed wages,
@@ -287,7 +288,9 @@
         two.work_order_no,
         twrd.user_id,
         twrd.created_time,
-        tod.order_no  <!-- 新增：订单号 -->
+        tod.order_no,
+        twrd.remark                 as remark
+
         from t_worker_report_dtl twrd
         inner join t_work_order two on twrd.work_order_id = two.id
         left join t_order_dtl tod on two.order_dtl_id = tod.id  <!-- 新增：订单明细关联 -->
@@ -322,5 +325,16 @@
         order by twrd.created_time desc
     </select>
 
+    <!-- 更新报工明细（加工件数、单价、工资、备注） -->
+    <update id="updateWorkerReportDtl">
+        update t_worker_report_dtl
+        set user_count = #{userCount},
+        remark     = #{remark}
+        where id = #{id};
+        update t_work_order
+        set hours_fixed = #{hoursFixed}
+        where id = (select work_order_id from t_worker_report_dtl where id = #{id});
+        <!-- 工资=件数*单价，如需持久化到独立字段，可在此追加 -->
+    </update>
 
 </mapper>

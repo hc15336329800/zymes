@@ -8,10 +8,12 @@ import cn.jb.boot.biz.work.mapper.WorkerReportDtlMapper;
 import cn.jb.boot.biz.work.service.WorkerReportDtlService;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDetailPageRequest;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDtlPageRequest;
+import cn.jb.boot.biz.work.vo.request.WorkerReportDtlUpdateRequest;
 import cn.jb.boot.biz.work.vo.response.WorkerReportDtlPageResponse;
 import cn.jb.boot.framework.com.request.Paging;
 import cn.jb.boot.framework.com.response.BaseResponse;
 import cn.jb.boot.util.ExcelUtil;
+import cn.jb.boot.util.MsgUtil;
 import cn.jb.boot.util.PageUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
@@ -87,6 +89,11 @@ public class WorkerReportDtlServiceImpl extends ServiceImpl<WorkerReportDtlMappe
 	}
 
 
+	@Override
+	public BaseResponse<Boolean> updateWorkerReportDtl(WorkerReportDtlUpdateRequest request) {
+		mapper.updateWorkerReportDtl(request);
+		return MsgUtil.ok(true);
+	}
 
 
 	/**

@@ -78,7 +78,7 @@ public class WorkerReportDtl extends BaseEntity {
     /**
      * 归属用户数量
      */
-    @Schema(description = "归属用户数量")
+    @Schema(description = "归属用户数量（加工件数）")
     @TableField("user_count")
     private BigDecimal userCount;
 
@@ -97,5 +97,9 @@ public class WorkerReportDtl extends BaseEntity {
     @Schema(description = "工单表Id")
     @TableField("work_order_id")
     private String workOrderId;
+
+    @Schema(description = "备注")
+    @TableField("remark")
+    private String remark;
 
 }

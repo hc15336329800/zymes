@@ -4,6 +4,7 @@ import cn.jb.boot.biz.work.service.WorkerReportDtlService;
 import cn.jb.boot.biz.work.service.impl.WorkerReportDtlServiceImpl;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDetailPageRequest;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDtlPageRequest;
+import cn.jb.boot.biz.work.vo.request.WorkerReportDtlUpdateRequest;
 import cn.jb.boot.biz.work.vo.response.WorkerReportDtlPageResponse;
 import cn.jb.boot.framework.com.request.BaseRequest;
 import cn.jb.boot.framework.com.response.BaseResponse;
@@ -57,6 +58,8 @@ public class WorkerReportDtlController {
 
 
 	//    工人报工工资明细
+	//	加工件数 user_count 来自 t_worker_report_dtl（别名 twrd）表；单价 hours_fixed 来自 t_work_order（别名 two）表。
+	//	user_count 属于 t_worker_report_dtl，而 hours_fixed 属于 t_work_order。
 	@PostMapping("/detail_page_list")
 	@Operation(summary = "查询工人报工明细分页列表")
 	public BaseResponse<List<WorkerReportDtlPageResponse>> detailPageList(@RequestBody @Valid BaseRequest<WorkerReportDetailPageRequest> request) {
@@ -64,6 +67,14 @@ public class WorkerReportDtlController {
 		return service.detailPageList(request.getPage(), params);
 	}
 
+
+	// 修改  后加
+
+	@PostMapping("/update")
+	@Operation(summary = "修改报工明细（必须填写备注）")
+	public BaseResponse<Boolean> update(@RequestBody @Valid WorkerReportDtlUpdateRequest request) {
+		return service.updateWorkerReportDtl(request);
+	}
 
 	/**
 	 * 下载工人报工工资明细（按条件导出 Excel）
@@ -84,7 +95,7 @@ public class WorkerReportDtlController {
 	@PostMapping("/download_salary_all_zip")
 	@Operation(summary = "导出全部工人的工资明细")
 	public void downloadSalaryAllZip(@RequestBody @Valid WorkerReportDetailPageRequest request,
-								  HttpServletResponse response) throws IOException {
+									 HttpServletResponse response) throws IOException {
 		iservice.downloadAllSalaryZip(request, response);
 	}
 
@@ -92,7 +103,7 @@ public class WorkerReportDtlController {
 	/**
 	 * 导出全部工人的工资明细  都输出到一张表中
 	 */
-		@PostMapping("/download_salary_all_table")
+	@PostMapping("/download_salary_all_table")
 	@Operation(summary = "导出全部工人的工资明细（单表）")
 	public void downloadSalaryAllTable(@RequestBody @Valid WorkerReportDetailPageRequest request,
 									   HttpServletResponse response) {

@@ -5,6 +5,7 @@ import cn.jb.boot.biz.work.dto.WorkerReportSalarySummaryDTO;
 import cn.jb.boot.biz.work.entity.WorkerReportDtl;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDetailPageRequest;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDtlPageRequest;
+import cn.jb.boot.biz.work.vo.request.WorkerReportDtlUpdateRequest;
 import cn.jb.boot.biz.work.vo.response.WorkerReportDtlPageResponse;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -43,4 +44,9 @@ public interface WorkerReportDtlMapper extends BaseMapper<WorkerReportDtl> {
     IPage<WorkerReportDtlPageResponse> pageInfo(Page<WorkerReportDtlPageResponse> page, @Param("p") WorkerReportDtlPageRequest params);
 
     IPage<WorkerReportDtlPageResponse> detailPageList(Page<WorkerReportDtlPageResponse> page, @Param("p") WorkerReportDetailPageRequest params);
+
+    void updateWorkerReportDtl(WorkerReportDtlUpdateRequest request);
+
+
+
 }
