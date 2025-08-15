@@ -3,6 +3,7 @@ package cn.jb.boot.biz.work.controller;
 import cn.jb.boot.biz.work.service.WorkerReportDtlService;
 import cn.jb.boot.biz.work.service.impl.WorkerReportDtlServiceImpl;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDetailPageRequest;
+import cn.jb.boot.biz.work.vo.request.WorkerReportDtlCreateRequest;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDtlPageRequest;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDtlUpdateRequest;
 import cn.jb.boot.biz.work.vo.response.WorkerReportDtlPageResponse;
@@ -43,6 +44,7 @@ public class WorkerReportDtlController {
 	private WorkerReportDtlServiceImpl iservice;
 
 
+
 	/**
 	 * 分页查询信息
 	 *
@@ -68,7 +70,16 @@ public class WorkerReportDtlController {
 	}
 
 
-	// 修改  后加
+	// 添加工人报工明细 -= 后加
+	@PostMapping("/create")
+	@Operation(summary = "新增工人报工明细记录")
+	public BaseResponse<String> create(@RequestBody @Valid BaseRequest<WorkerReportDtlCreateRequest> request) {
+		WorkerReportDtlCreateRequest params = MsgUtil.params(request);
+		service.addWorkerReportDtl(params);
+		return MsgUtil.ok();
+	}
+
+	// 修改   -= 后加
 
 	@PostMapping("/update")
 	@Operation(summary = "修改报工明细（必须填写备注）")

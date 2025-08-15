@@ -7,6 +7,7 @@ import cn.jb.boot.biz.work.entity.WorkerReportDtl;
 import cn.jb.boot.biz.work.mapper.WorkerReportDtlMapper;
 import cn.jb.boot.biz.work.service.WorkerReportDtlService;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDetailPageRequest;
+import cn.jb.boot.biz.work.vo.request.WorkerReportDtlCreateRequest;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDtlPageRequest;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDtlUpdateRequest;
 import cn.jb.boot.biz.work.vo.response.WorkerReportDtlPageResponse;
@@ -16,6 +17,7 @@ import cn.jb.boot.util.ExcelUtil;
 import cn.jb.boot.util.MsgUtil;
 import cn.jb.boot.util.PageUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -252,5 +254,12 @@ public class WorkerReportDtlServiceImpl extends ServiceImpl<WorkerReportDtlMappe
 		writer.addHeaderAlias("bomNo", "单价");
 		writer.addHeaderAlias("needNum", "工资");
 		writer.write(list, true);
+	}
+
+	@Override
+	public void addWorkerReportDtl(WorkerReportDtlCreateRequest request) {
+		WorkerReportDtl entity = new WorkerReportDtl();
+		BeanUtils.copyProperties(request, entity);
+		this.save(entity);     // MyBatis-Plus 提供的保存方法
 	}
 }

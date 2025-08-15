@@ -6,6 +6,7 @@ import cn.jb.boot.biz.sales.vo.request.DeliveryMainPageReq;
 import cn.jb.boot.biz.work.dto.WorkerReportSalarySummaryDTO;
 import cn.jb.boot.biz.work.entity.WorkerReportDtl;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDetailPageRequest;
+import cn.jb.boot.biz.work.vo.request.WorkerReportDtlCreateRequest;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDtlPageRequest;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDtlUpdateRequest;
 import cn.jb.boot.biz.work.vo.response.WorkerReportDtlPageResponse;
@@ -46,4 +47,7 @@ public interface WorkerReportDtlService extends IService<WorkerReportDtl> {
 
 
     void exportOrder(WorkerReportDtlPageRequest params, HttpServletResponse response);
+
+  /* ========= 新增：保存工人报工明细 ========= */
+  void addWorkerReportDtl(WorkerReportDtlCreateRequest request);
 }
