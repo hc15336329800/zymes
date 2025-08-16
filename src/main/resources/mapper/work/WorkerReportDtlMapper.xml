@@ -142,7 +142,13 @@
     </select>
 
 
-
+    <!-- ★ 新增：按报工明细ID统计同一工单号的记录数 -->
+    <select id="countByWorkOrderId" resultType="int">
+        select count(*)
+        from t_worker_report_dtl
+        where work_order_id =
+              (select work_order_id from t_worker_report_dtl where id = #{id})
+    </select>
 
 
     <!--    根据条件分页查询工人报工明细列表&ndash;&gt;-->

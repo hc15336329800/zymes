@@ -45,6 +45,8 @@ public interface WorkerReportDtlService extends IService<WorkerReportDtl> {
 
   BaseResponse<Boolean> updateWorkerReportDtl(WorkerReportDtlUpdateRequest request);
 
+  // ★ 新增：校验同工单号的报工记录是否重复
+  int countByWorkOrderId(String  id);
 
     void exportOrder(WorkerReportDtlPageRequest params, HttpServletResponse response);
 

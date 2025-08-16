@@ -49,6 +49,10 @@ public class WorkerReportDtlController {
 	@Resource                                 // ★ ：用于根据工单号获取工单
 	private WorkOrderService workOrderService;
 
+
+
+
+
 	/**
 	 * 分页查询信息
 	 *
@@ -78,6 +82,13 @@ public class WorkerReportDtlController {
 	@PostMapping("/create")
 	@Operation(summary = "新增工人报工明细记录")
 	public BaseResponse<String> create(@RequestBody @Valid WorkerReportDtlCreateRequest request) {
+
+		// ★ 新增：校验工单号是否重复，若重复则提醒并跳过
+		if (workOrderService.lambdaQuery()
+				.eq(WorkOrder::getWorkOrderNo, request.getWorkOrderNo())
+				.count() > 0) {
+			return MsgUtil.fail("存在重复工单号，已跳过新增");     // ★
+		}
 
 		WorkOrder	workOrder = new WorkOrder();
 		workOrder.setWorkOrderNo(request.getWorkOrderNo());     // ★

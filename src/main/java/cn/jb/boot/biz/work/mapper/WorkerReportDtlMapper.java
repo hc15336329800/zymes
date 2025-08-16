@@ -35,6 +35,9 @@ public interface WorkerReportDtlMapper extends BaseMapper<WorkerReportDtl> {
     List<WorkerReportSalarySummaryDTO> summaryByUser(
             WorkerReportDetailPageRequest params);
 
+    // ★ 新增：统计同工单号的报工明细数量
+    int countByWorkOrderId(@Param("id") String  id);
+
     /**
      * 根据条件分页查询工人报工明细列表
      *

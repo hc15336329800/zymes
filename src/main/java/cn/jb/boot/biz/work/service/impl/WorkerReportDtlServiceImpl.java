@@ -93,10 +93,20 @@ public class WorkerReportDtlServiceImpl extends ServiceImpl<WorkerReportDtlMappe
 
 	@Override
 	public BaseResponse<Boolean> updateWorkerReportDtl(WorkerReportDtlUpdateRequest request) {
-		mapper.updateWorkerReportDtl(request);
+		// ★ 新增：若同工单号存在多条明细，直接报错并跳过
+		// ★ 使用 String 类型的 id 进行重复校验
+		if (mapper.countByWorkOrderId(request.getId()) > 1) {
+			return MsgUtil.fail("存在重复工单号，已跳过修改");
+		}
+		mapper.updateWorkerReportDtl(request);           // ★ 保留原更新
 		return MsgUtil.ok(true);
 	}
 
+	// ★ 实现接口新增的方法
+	@Override
+	public int countByWorkOrderId(String  id) {
+		return mapper.countByWorkOrderId(id);
+	}
 
 	/**
 	 * 导出全部工资明细（按条件过滤工资<=0的记录，按人分文件打包 ZIP）
