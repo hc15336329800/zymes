@@ -554,6 +554,9 @@ public class AgvManageInfoServiceImpl extends ServiceImpl<AgvManageInfoMapper, A
                 usTask.put("agvName",task.getAgvName());
                 Map<String, Object> loactions = (Map)loactionMap.get(task.getBegin());
                 DeviceLocationInfo deviceLocations = (DeviceLocationInfo)eviceLocationMap.get(loactions.get("name"));
+                if(deviceLocations == null){ //后增
+                    continue;
+                }
                 usTask.put("begin",deviceLocations.getStation());
                 usTask.put("beginLocation",deviceLocations.getLocation());
                 Map<String, Object> loactionEnd = (Map)loactionMap.get(task.getEnd());

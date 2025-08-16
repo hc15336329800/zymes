@@ -77,24 +77,24 @@ public class WorkerReportDtlController {
 	// 添加工人报工明细 -= 后加
 	@PostMapping("/create")
 	@Operation(summary = "新增工人报工明细记录")
-	public BaseResponse<String> create(@RequestBody @Valid WorkerReportDtlCreateRequest request) { // ★修改：直接接收 JSON
+	public BaseResponse<String> create(@RequestBody @Valid WorkerReportDtlCreateRequest request) {
 
-		// ★新增：通过工单号查询工单
-		WorkOrder workOrder = workOrderService.lambdaQuery()
-				.eq(WorkOrder::getWorkOrderNo, request.getWorkOrderNo())
-				.one();
-		if (workOrder == null) {
-			return MsgUtil.fail("工单不存在");  // ★新增
-		}
+		WorkOrder	workOrder = new WorkOrder();
+		workOrder.setWorkOrderNo(request.getWorkOrderNo());     // ★
+//			workOrder.setOrderNo(request.getOrderNo());             // ★
+//			workOrder.setBomNo(request.getBomNo());                 // ★
+		workOrder.setProcedureName(request.getProcedureName()); // ★
+		workOrder.setHoursFixed(request.getHoursFixed());       // ★
+		workOrderService.save(workOrder);                       // ★
 
-		// ★新增：组装实体并保存
+		// ★2. 仅写入明细表已有字段
 		WorkerReportDtl entity = new WorkerReportDtl();
 		entity.setUserId(request.getUserId());
-		entity.setWorkOrderId(workOrder.getId());     // ★绑定工单 ID
+		entity.setWorkOrderId(workOrder.getId());
 		entity.setUserCount(request.getUserCount());
 		entity.setRemark(request.getRemark());
-//		entity.setCreatedTime(request.getCreatedTime());
-		service.save(entity);                          // ★修改：直接使用 service 保存
+		entity.setCreatedTime(request.getCreatedTime());
+		service.save(entity);                                       // ★
 
 		return MsgUtil.ok();
 	}
