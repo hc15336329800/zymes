@@ -1,5 +1,6 @@
 package cn.jb.boot.biz.work.vo.request;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -7,6 +8,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 /**
  * 工人报工明细 新增请求参数
@@ -17,38 +19,35 @@ public class WorkerReportDtlCreateRequest implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-	@NotBlank
 	@Schema(description = "用户ID")
-	private String userId;
+	private String userId;                      // ★保留原字段
 
-	@NotBlank
-	@Schema(description = "分组ID")
-	private String groupId;
+	@Schema(description = "工单号")
+	private String workOrderNo;                 // ★新增
 
-	@NotBlank
-	@Schema(description = "分组账户ID")
-	private String groupUid;
+	@Schema(description = "订单号")
+	private String orderNo;                     // ★新增
 
-	@NotBlank
-	@Schema(description = "报工类型")
-	private String reportType;
+	@Schema(description = "BOM 编码")
+	private String bomNo;                       // ★新增
 
-	@NotNull
-	@Schema(description = "报工数量")
-	private BigDecimal reportCount;
+	@Schema(description = "工序名称")
+	private String procedureName;               // ★新增
 
-	@NotNull
-	@Schema(description = "归属用户数量（加工件数）")
-	private BigDecimal userCount;
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+	@Schema(description = "报工时间")
+	private LocalDateTime createdTime;          // ★新增
 
-	@NotBlank
-	@Schema(description = "报工ID")
-	private String reportId;
 
-	@NotBlank
-	@Schema(description = "工单表ID")
-	private String workOrderId;
+	@Schema(description = "加工件数")
+	private BigDecimal userCount;               // ★原字段重用
+
+	@Schema(description = "单价")
+	private BigDecimal hoursFixed;              // ★新增（前端展示用）
+
+	@Schema(description = "工资")
+	private BigDecimal wages;                   // ★新增（前端展示用）
 
 	@Schema(description = "备注")
-	private String remark;
+	private String remark;                      // ★保留原字段
 }

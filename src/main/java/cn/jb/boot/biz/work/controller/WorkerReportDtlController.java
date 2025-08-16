@@ -1,5 +1,8 @@
 package cn.jb.boot.biz.work.controller;
 
+import cn.jb.boot.biz.work.entity.WorkOrder;
+import cn.jb.boot.biz.work.entity.WorkerReportDtl;
+import cn.jb.boot.biz.work.service.WorkOrderService;
 import cn.jb.boot.biz.work.service.WorkerReportDtlService;
 import cn.jb.boot.biz.work.service.impl.WorkerReportDtlServiceImpl;
 import cn.jb.boot.biz.work.vo.request.WorkerReportDetailPageRequest;
@@ -43,7 +46,8 @@ public class WorkerReportDtlController {
 	@Resource
 	private WorkerReportDtlServiceImpl iservice;
 
-
+	@Resource                                 // ★ ：用于根据工单号获取工单
+	private WorkOrderService workOrderService;
 
 	/**
 	 * 分页查询信息
@@ -73,9 +77,25 @@ public class WorkerReportDtlController {
 	// 添加工人报工明细 -= 后加
 	@PostMapping("/create")
 	@Operation(summary = "新增工人报工明细记录")
-	public BaseResponse<String> create(@RequestBody @Valid BaseRequest<WorkerReportDtlCreateRequest> request) {
-		WorkerReportDtlCreateRequest params = MsgUtil.params(request);
-		service.addWorkerReportDtl(params);
+	public BaseResponse<String> create(@RequestBody @Valid WorkerReportDtlCreateRequest request) { // ★修改：直接接收 JSON
+
+		// ★新增：通过工单号查询工单
+		WorkOrder workOrder = workOrderService.lambdaQuery()
+				.eq(WorkOrder::getWorkOrderNo, request.getWorkOrderNo())
+				.one();
+		if (workOrder == null) {
+			return MsgUtil.fail("工单不存在");  // ★新增
+		}
+
+		// ★新增：组装实体并保存
+		WorkerReportDtl entity = new WorkerReportDtl();
+		entity.setUserId(request.getUserId());
+		entity.setWorkOrderId(workOrder.getId());     // ★绑定工单 ID
+		entity.setUserCount(request.getUserCount());
+		entity.setRemark(request.getRemark());
+//		entity.setCreatedTime(request.getCreatedTime());
+		service.save(entity);                          // ★修改：直接使用 service 保存
+
 		return MsgUtil.ok();
 	}
 
@@ -137,4 +157,7 @@ public class WorkerReportDtlController {
 	public void exportOrder(@RequestBody @Valid BaseRequest<WorkerReportDtlPageRequest> request, HttpServletResponse response) {
 		service.exportOrder(MsgUtil.params(request), response);
 	}
+
+
+
 }
