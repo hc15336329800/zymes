@@ -46,11 +46,11 @@ public class CacheRefreshTask implements CommandLineRunner {
     private DeviceInfoMapper deviceInfoMapper;
 
 
-//    @Scheduled(cron = "0 0/30 * * * ?")
+    @Scheduled(cron = "0 0/60 * * * ?")
     public void initData() {
-        log.info("定时刷新缓存  暂时停止  请手动打开");
-        System.out.println("info:  定时刷新缓存开始  装载字典（频率30分钟） 暂时停止  请手动打开");
-        //run();
+//        log.info("定时刷新缓存  暂时停止  请手动打开");
+        System.out.println("info:  定时刷新缓存开始  装载字典（频率60分钟）  ");
+        run();
     }
 
     @Override

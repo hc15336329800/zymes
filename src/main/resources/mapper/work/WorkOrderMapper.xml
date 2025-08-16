@@ -62,11 +62,19 @@
         and two.bom_no like concat('%',#{p.bomNo},'%')
         </if>
 
+<!--        <if test="p.status != null and p.status == '01'">-->
+<!--            and two.plan_total_count != two.real_count-->
+<!--        </if>-->
+<!--        <if test="p.status != null and p.status == '02'">-->
+<!--            and two.plan_total_count = two.real_count-->
+<!--        </if>-->
+
+#         工单完成 = 正品数量 + 次品数量 = 计划数量（不管次品是否验收完毕），
         <if test="p.status != null and p.status == '01'">
-            and two.plan_total_count != two.real_count
+            and two.plan_total_count != (two.real_count + two.deff_count)
         </if>
         <if test="p.status != null and p.status == '02'">
-            and two.plan_total_count = two.real_count
+            and two.plan_total_count = (two.real_count + two.deff_count)
         </if>
 
 
