@@ -66,7 +66,27 @@ public class MesToErpDataService {
 	@Autowired
 	private MesItemStockMapper mesItemStockMapper;
 
+
+
+	//=====================================数据=========================================
+
+	/** 统一过滤特殊字符（控制符、首尾空格等） */
+	private String sanitize(Object value) {
+		if (value == null) return "";
+		return value.toString()
+				.replaceAll("[\\p{Cntrl}]", "")   // 去掉控制字符，如 \r \n \t
+				.trim();
+	}
+	//  统一清洗：把 Map 中所有 String 字段做 sanitize，非字符串保持原样
+	private void cleanStrFields(Map<String, Object> row) {
+		if (row == null) return;
+		row.replaceAll((k, v) -> (v instanceof CharSequence) ? sanitize(v) : v);
+	}
+
+
+
 //=====================================map中切换数据源=========================================
+
 
 
 
@@ -86,6 +106,8 @@ public class MesToErpDataService {
 		List<Map<String, Object>> erpList;
 		try {
 			erpList = mesToErpDataMapper.materialMessage();
+			// 统一清洗字符串字段
+			erpList.forEach(this::cleanStrFields);
 			log.info("[物料同步] ERP拉取数量：{}", erpList == null ? 0 : erpList.size());
 			System.out.println("[物料同步] ERP拉取数量：" + (erpList == null ? 0 : erpList.size()));
 		} catch (Exception e) {
@@ -219,6 +241,10 @@ public class MesToErpDataService {
 	public int syncBomTree() {
 		// 1. 拉ERP BOM用料
 		List<Map<String, Object>> bomList = mesToErpDataMapper.bomMessage();
+		if (bomList == null || bomList.isEmpty()) { return 0; }
+		// 统一清洗字符串字段
+		bomList.forEach(this::cleanStrFields);
+
 		System.out.println("ERP-BOM拉取结果：" + bomList);
 		if (bomList == null || bomList.isEmpty()) {
 			return 0;
@@ -317,6 +343,8 @@ public class MesToErpDataService {
 		List<Map<String, Object>> erpRouterList;
 		try {
 			erpRouterList = mesToErpDataMapper.bomRouter();
+			// 统一清洗字符串字段
+			erpRouterList.forEach(this::cleanStrFields);
 			log.info("[工序同步] ERP 拉取数量：{}", erpRouterList == null ? 0 : erpRouterList.size());
 		} catch (Exception e) {
 			log.error("[工序同步] ERP 数据拉取失败", e);
