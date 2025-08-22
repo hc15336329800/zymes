@@ -1,0 +1,5 @@
+
+如何判断最后一道工序逻辑说明：
+“最后一道工序”的判定并未在业务接口中直接使用 lastFlag。
+相反，定时任务 GetMesDataJob.updateMidItemStock 会优先查找名称包含“装车”的工序，否则取 seq_no 最大的工序，将其标记为 last_flag='01'，
+因此最终还是按工序顺序(seq_no)来确认“最后一道工序”
