@@ -552,14 +552,14 @@ public class AgvManageInfoServiceImpl extends ServiceImpl<AgvManageInfoMapper, A
             for(AgvManageInfoPageResponse task:usingTask){
                 Map<String,Object> usTask = new HashMap<>();
                 usTask.put("agvName",task.getAgvName());
-                Map<String, Object> loactions = (Map)loactionMap.get(task.getBegin());
+                Map<String, Object> loactions = (Map)loactionMap.get(task.getBegin().replace("-","")); //xinzne
                 DeviceLocationInfo deviceLocations = (DeviceLocationInfo)eviceLocationMap.get(loactions.get("name"));
                 if(deviceLocations == null){ //后增
                     continue;
                 }
                 usTask.put("begin",deviceLocations.getStation());
                 usTask.put("beginLocation",deviceLocations.getLocation());
-                Map<String, Object> loactionEnd = (Map)loactionMap.get(task.getEnd());
+                Map<String, Object> loactionEnd = (Map)loactionMap.get(task.getEnd().replace("-","")); //新增
                 DeviceLocationInfo deviceLocationEnd = (DeviceLocationInfo)eviceLocationMap.get(loactionEnd.get("name"));
                 usTask.put("end",deviceLocationEnd.getStation());
                 usTask.put("endLocation",deviceLocationEnd.getLocation());

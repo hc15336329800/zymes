@@ -21,6 +21,6 @@
     </select>
     <!-- 查询一周内的任务量 -->
     <select id="getTaskOfWeek" resultType="java.util.Map">
-        select count(*) as count,DATE(endtime) as time  from agvtaskhistory group by DATE(endtime) limit 7;
+        select count(*) as count,DATE(endtime) as time  from agvtaskhistory   where beginCmd = 'Idle'  group by DATE(endtime) limit 7;
     </select>
 </mapper>

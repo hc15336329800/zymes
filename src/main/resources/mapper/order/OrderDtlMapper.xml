@@ -147,6 +147,7 @@
         d.order_no          AS orderNo,
         d.item_no           AS itemNo,
         d.item_count        AS itemCount,
+        IFNULL(pa.prod_count, 0) AS productionCount,  -- 改为查询分配表的 prod_count
         d.production_count  AS productionCount,
         d.order_dtl_status  AS orderDtlStatus,
         d.need_mid_count    AS needMidCount,
@@ -159,6 +160,12 @@
         LEFT JOIN mes_item_stock mis ON d.item_no = mis.item_no
         LEFT JOIN t_production_order po ON po.sales_order_no = d.order_no
         LEFT JOIN mes_item_stock topMis ON topMis.item_no = po.item_no
+        LEFT JOIN t_proc_allocation pa     -- 新增：关联工序分配表
+                ON pa.order_dtl_id = d.id
+                AND pa.seq_no = (SELECT MAX(seq_no)
+                FROM t_proc_allocation
+                WHERE order_dtl_id = d.id)  -- 取最后一道工序
+
         WHERE d.order_no IN
         <foreach collection="orderNos" item="ono" open="(" separator="," close=")">
             #{ono}

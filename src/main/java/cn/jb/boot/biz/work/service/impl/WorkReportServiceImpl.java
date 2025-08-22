@@ -148,6 +148,7 @@ public class WorkReportServiceImpl extends ServiceImpl<WorkReportMapper, WorkRep
                     wo.setDeffCount(ArithUtil.add(workOrder.getDeffCount(), wr.getDeffCount()));
                     upWoList.add(wo);
                     passList.add(wr);
+
                 }
 
                 if (ReportStatus.REVIEW_REJECT.getCode().equals(params.getStatus())) {
