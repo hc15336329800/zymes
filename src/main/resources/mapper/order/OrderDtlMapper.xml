@@ -340,7 +340,7 @@
         d.order_no          AS orderNo,
         d.item_no           AS itemNo,
         d.item_count        AS itemCount,
-        IFNULL(pa.prod_count, 0) AS productionCount,  <!-- 修改：改用 t_proc_allocation 的 prod_count -->
+        IFNULL(pa.prod_count, 0) AS productionCount,
         d.order_dtl_status  AS orderDtlStatus,
         d.need_mid_count    AS needMidCount,
         d.updated_by,
@@ -351,13 +351,13 @@
         FROM t_order_dtl d
         LEFT JOIN mes_item_stock mis
         ON d.item_no = mis.item_no
-        LEFT JOIN t_proc_allocation pa                        <!-- 修改：关联工序分配表 -->
+        LEFT JOIN t_proc_allocation pa
         ON pa.order_dtl_id = d.id
         AND pa.seq_no = (
         SELECT MAX(seq_no)
         FROM t_proc_allocation
         WHERE order_dtl_id = d.id
-        )                                                 <!-- 修改：只取最后一道工序 -->
+        )
         <where>
             <if test="p.childItemNos != null and p.childItemNos.size() > 0">
                 d.item_no IN
