@@ -182,7 +182,8 @@
         <if test="dto.bomNo != null and dto.bomNo != ''">
             AND topMis.bom_no = #{dto.bomNo} <!-- 母件 BOM 过滤 -->
         </if>
-        ORDER BY d.order_no, d.created_time DESC
+#         ORDER BY d.order_no, d.created_time DESC
+        ORDER BY d.created_time DESC
     </select>
 
 
