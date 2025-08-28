@@ -37,6 +37,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.time.LocalDateTime;
 
+import org.apache.commons.collections4.CollectionUtils;
 
 /**
  * 工序分配表 服务实现类
@@ -216,95 +217,91 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
 
 
 	// 工序分配数量（全量 ）
-	private void saveWorkOrder(String shiftType, String groupId, List<SingleProcAllocReq> list, Map<String,
-			ProcAllocation> map) {
-		List<String> woIds = list.stream().map(SingleProcAllocReq::getWorkOrderId).collect(Collectors.toList());
-		Map<String, WorkOrder> woMap = new HashMap<>();
-		if (CollectionUtils.isNotEmpty(woIds)) {
-			List<WorkOrder> workOrders = workOrderService.listByIds(woIds);
-			woMap = workOrders.stream().collect(Collectors.toMap(WorkOrder::getId, Function.identity()));
+	private void saveWorkOrderNew(String shiftType,
+								  String groupId,
+								  List<SingleProcAllocReq> list,
+								  Map<String, ProcAllocation> map) {
+		if (CollectionUtils.isEmpty(list)) {
+			return;
 		}
+
+
+		List<String> woIds = list.stream()
+				.map(SingleProcAllocReq::getWorkOrderId)
+				.filter(StringUtils::isNotEmpty)  // 现在指向 Apache 的 isNotEmpty
+				.collect(Collectors.toList());
+
+		Map<String, WorkOrder> woMap = new HashMap<>();
+		if (CollectionUtils.isNotEmpty(woIds)) {  // Apache Collections4 的 isNotEmpty
+			List<WorkOrder> workOrders = workOrderService.listByIds(woIds);
+			woMap = workOrders.stream()
+					.collect(Collectors.toMap(WorkOrder::getId, Function.identity()));
+		}
+
+
+
 		List<WorkOrderRecord> records = new ArrayList<>();
-
 		List<WorkOrder> woList = new ArrayList<>();
-		for (SingleProcAllocReq sq : list) {
-			ProcAllocation pa = map.get(sq.getId());
 
-			// 获取分配数量 workItemCount
-
-			// ===== 【修复】仅考虑工厂已分配数量，不再计入外协 =====
-			BigDecimal workerAlloc = Optional.ofNullable(pa.getWorkerAllocCount())
-					.orElse(BigDecimal.ZERO);   // 已分配（工厂）
-			BigDecimal total = Optional.ofNullable(pa.getTotalCount())
-					.orElse(BigDecimal.ZERO);        // 总数量
-
-			BigDecimal remain = total.subtract(workerAlloc);             // 剩余可分配
-
-			BigDecimal  al  = sq.getAllocCount();  // 获取前端分配数量
-
-			if (al.compareTo(remain) > 0) { // al > remain
-				throw new CavException("分配数量超过了可分配总数!");
+		for (SingleProcAllocReq req : list) {
+			ProcAllocation pa = map.get(req.getId());
+			BigDecimal current = Optional.ofNullable(pa.getWorkerAllocCount())
+					.orElse(BigDecimal.ZERO);
+			BigDecimal remain = pa.getTotalCount().subtract(current);
+			if (req.getAllocCount().compareTo(remain) > 0) {
+				throw new CavException("追加数量超过剩余可分配数量!");
 			}
 
-//			if (sq.getAllocCount().compareTo(remain) > 0) {
-//				throw new CavException("分配数量超过了可分配总数!");
-//			}
+			BigDecimal newCount = current.add(req.getAllocCount());
+			pa.setWorkerAllocCount(newCount);
+			pa.setDeviceId(req.getDeviceId());
+			pa.setUpdatedTime(LocalDateTime.now());
 
+			WorkOrder wo;
+			BigDecimal delta;
+			if (StringUtils.isEmpty(req.getWorkOrderId())) {
+				wo = new WorkOrder();
+				wo.setId(SnowFlake.genId());
+				wo.setWorkOrderNo(seqUtil.workOrderNo());
+				delta = req.getAllocCount();
+			} else {
+				wo = woMap.get(req.getWorkOrderId());
+				delta = newCount.subtract(wo.getPlanTotalCount());
+			}
 
-
-
-			WorkOrderRecord record = new WorkOrderRecord();
-			WorkOrder wo = new WorkOrder();
-			wo.setId(sq.getWorkOrderId());
-			wo.setAllocId(sq.getId());
+			wo.setAllocId(req.getId());
 			wo.setShiftType(shiftType);
-			wo.setDeviceId(sq.getDeviceId());
-			wo.setPlanTotalCount(sq.getAllocCount());
+			wo.setGroupId(groupId);
+			wo.setDeviceId(req.getDeviceId());
+			wo.setPlanTotalCount(newCount);
 			wo.setDeptId(pa.getDeptId());
 			wo.setItemNo(pa.getItemNo());
 			wo.setHoursFixed(pa.getHoursFixed());
 			wo.setOrderDtlId(pa.getOrderDtlId());
 			wo.setProcedureCode(pa.getProcedureCode());
 			wo.setProcedureName(pa.getProcedureName());
-
-			wo.setState("就绪"); // 【新增】设置工单状态为“就绪”
-			wo.setGroupId(groupId);   // 【新增】班次
-
-			if (StringUtils.isEmpty(sq.getWorkOrderId())) {
-				String workOrderNo = seqUtil.workOrderNo();
-				wo.setWorkOrderNo(workOrderNo);
-				wo.setId(SnowFlake.genId());
-				pa.setWorkerAllocCount(ArithUtil.add(pa.getWorkerAllocCount(), wo.getPlanTotalCount()));
-				record.setItemCount(wo.getPlanTotalCount());
-			} else {
-				WorkOrder workOrder = woMap.get(wo.getId());
-				if (sq.getAllocCount().compareTo(workOrder.getAssignCount()) < 0) {
-					throw new CavException("分配数量不能小于已下达数量数量");
-				}
-				BigDecimal sub = ArithUtil.sub(wo.getPlanTotalCount(), workOrder.getPlanTotalCount());
-				pa.setWorkerAllocCount(ArithUtil.add(pa.getWorkerAllocCount(), sub));
-				record.setItemCount(sub);
-
-			}
-			record.setWorkOrderId(wo.getId());
 			wo.setProcStatus(pa.getProcStatus());
 			wo.setDataStatus(Constants.STATUS_00);
 			woList.add(wo);
-			if (record.getItemCount().compareTo(BigDecimal.ZERO) > 0) {
+
+			WorkOrderRecord record = new WorkOrderRecord();
+			record.setId(IdUtil.simpleUUID());
+			record.setWorkOrderId(wo.getId());
+			record.setItemCount(delta);
+			record.setCreatedTime(LocalDateTime.now());
+			record.setUpdatedTime(LocalDateTime.now());
+			if (delta.compareTo(BigDecimal.ZERO) > 0) {
 				records.add(record);
 			}
-
-			if (pa.getWorkerAllocCount().add(pa.getOuterAllocCount()).compareTo(pa.getTotalCount()) > 0) {
-				throw new CavException("分配数量超过了可分配总数!");
-			}
 		}
+
 		if (CollectionUtils.isNotEmpty(records)) {
 			workOrderRecordService.saveBatch(records);
 		}
-		workOrderService.saveOrUpdateBatch(woList);
-
+		if (CollectionUtils.isNotEmpty(woList)) {
+			workOrderService.saveOrUpdateBatch(woList);
+		}
 	}
-
 
 
 	// 工序分配数量（全量+最佳 合并）
