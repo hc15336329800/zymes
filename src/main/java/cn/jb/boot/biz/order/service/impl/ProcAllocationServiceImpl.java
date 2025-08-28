@@ -271,6 +271,30 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
 		List<WorkOrder> woList = new ArrayList<>();
 		for (SingleProcAllocReq sq : list) {
 			ProcAllocation pa = map.get(sq.getId());
+
+			// 获取分配数量 workItemCount
+
+			// ===== 【修复】仅考虑工厂已分配数量，不再计入外协 =====
+			BigDecimal workerAlloc = Optional.ofNullable(pa.getWorkerAllocCount())
+					.orElse(BigDecimal.ZERO);   // 已分配（工厂）
+			BigDecimal total = Optional.ofNullable(pa.getTotalCount())
+					.orElse(BigDecimal.ZERO);        // 总数量
+
+			BigDecimal remain = total.subtract(workerAlloc);             // 剩余可分配
+
+			BigDecimal  al  = sq.getAllocCount();  // 获取前端分配数量
+
+			if (al.compareTo(remain) > 0) { // al > remain
+				throw new CavException("分配数量超过了可分配总数!");
+			}
+
+//			if (sq.getAllocCount().compareTo(remain) > 0) {
+//				throw new CavException("分配数量超过了可分配总数!");
+//			}
+
+
+
+
 			WorkOrderRecord record = new WorkOrderRecord();
 			WorkOrder wo = new WorkOrder();
 			wo.setId(sq.getWorkOrderId());
@@ -311,6 +335,7 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
 			if (record.getItemCount().compareTo(BigDecimal.ZERO) > 0) {
 				records.add(record);
 			}
+
 			if (pa.getWorkerAllocCount().add(pa.getOuterAllocCount()).compareTo(pa.getTotalCount()) > 0) {
 				throw new CavException("分配数量超过了可分配总数!");
 			}

@@ -546,6 +546,7 @@ public class MesToErpDataService {
 
 
 //	erp设备和mes设备映射
+//	PROCEDURE_DEVICE_MAP.put() 的第一个参数对应 ERP 数据表中的工序编码字段 STRROUTECODE
 	private static final Map<String, String> PROCEDURE_DEVICE_MAP = new HashMap<>();
 	static {
 		PROCEDURE_DEVICE_MAP.put("1", "424949962023788480"); // 数控激光切割机
