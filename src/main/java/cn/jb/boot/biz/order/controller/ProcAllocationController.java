@@ -96,7 +96,9 @@ public class ProcAllocationController {
     @PostMapping("/alloc_proc_v1")
     @Operation(summary = "工序分配")
     public BaseResponse<String> createWorkOrder(@RequestBody @Valid BaseRequest<BatchProcAllocReq> request) {
-        service.createWorkOrder(MsgUtil.params(request));
+//        service.createWorkOrder(MsgUtil.params(request));
+        service.createWorkOrderNew(MsgUtil.params(request));  // new 新的分开的
+
         return MsgUtil.ok();
     }
 

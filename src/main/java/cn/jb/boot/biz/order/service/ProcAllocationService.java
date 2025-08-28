@@ -56,4 +56,6 @@ public interface ProcAllocationService extends IService<ProcAllocation> {
 
 
     BaseResponse<List<OuterDistInfoResponse>> outerPubList(Paging page, OuterPubPageRequest params);
+
+    void createWorkOrderNew(BatchProcAllocReq params);
 }

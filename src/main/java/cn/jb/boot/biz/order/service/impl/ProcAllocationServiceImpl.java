@@ -105,6 +105,132 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
 	@Resource
 	private OrderDtlService orderDtlService;
 
+	/////////////////////////////////////////////////////////////////////////////
+	@Transactional(rollbackFor = Throwable.class)
+	public void createWorkOrderNew(BatchProcAllocReq params) {
+		List<SingleProcAllocReq> list = params.getList();
+		List<String> ids = list.stream().map(SingleProcAllocReq::getId).collect(Collectors.toList());
+		Map<String, ProcAllocation> map = this.listByIds(ids).stream()
+				.collect(Collectors.toMap(ProcAllocation::getId, Function.identity()));
+
+		// 【新增】判定：若所有明细分配量都等于总量 ⇒ 全量；否则视为增量
+		boolean full = list.stream().allMatch(req -> {
+			ProcAllocation pa = map.get(req.getId());
+			return req.getAllocCount().compareTo(pa.getTotalCount()) == 0;
+		});
+
+		if (full) {
+			// 【新增】全量分配：走 saveWorkOrder
+			saveWorkOrderNew(params.getShiftType(), params.getGroupId(), list, map);
+			this.updateBatchById(map.values());   // 【新增】批量更新
+		} else {
+			// 【新增】增量追加：走 saveWorkOrderNew
+			saveWorkOrderNew(params);
+		}
+
+		// 订单状态处理逻辑保持不变……
+	}
+
+
+	/**
+	 * 全量分配：分配数量必须等于工序总数，仅负责新增工单
+	 */
+	private void saveWorkOrderNew(String shiftType, String groupId,
+							   List<SingleProcAllocReq> list,
+							   Map<String, ProcAllocation> map) {
+		List<WorkOrderRecord> records = new ArrayList<>();
+		List<WorkOrder> woList = new ArrayList<>();
+
+		for (SingleProcAllocReq sq : list) {
+			ProcAllocation pa = map.get(sq.getId());
+
+			// 【新增】全量校验
+			if (sq.getAllocCount().compareTo(pa.getTotalCount()) != 0) {
+				throw new CavException("saveWorkOrder 只处理全量分配");
+			}
+
+			WorkOrder wo = new WorkOrder();
+			wo.setAllocId(sq.getId());
+			wo.setShiftType(shiftType);
+			wo.setDeviceId(sq.getDeviceId());
+			wo.setPlanTotalCount(sq.getAllocCount());
+			wo.setGroupId(groupId);
+			wo.setDeptId(pa.getDeptId());
+			wo.setItemNo(pa.getItemNo());
+			wo.setHoursFixed(pa.getHoursFixed());
+			wo.setOrderDtlId(pa.getOrderDtlId());
+			wo.setProcedureCode(pa.getProcedureCode());
+			wo.setProcedureName(pa.getProcedureName());
+			wo.setState("就绪");
+
+			// 【新增】仅新增工单
+			String workOrderNo = seqUtil.workOrderNo();
+			wo.setWorkOrderNo(workOrderNo);
+			wo.setId(SnowFlake.genId());
+			pa.setWorkerAllocCount(pa.getTotalCount());
+			WorkOrderRecord record = new WorkOrderRecord();
+			record.setWorkOrderId(wo.getId());
+			record.setItemCount(wo.getPlanTotalCount());
+			records.add(record);
+
+			woList.add(wo);
+		}
+
+		if (CollectionUtils.isNotEmpty(records)) {
+			workOrderRecordService.saveBatch(records);
+		}
+		workOrderService.saveBatch(woList);  // 【修改】仅保存新增工单
+	}
+
+	/**
+	 * 增量分配：在已有工单上追加分配量
+	 */
+	private void saveWorkOrderNew(BatchProcAllocReq params) {
+		List<SingleProcAllocReq> list =
+				Optional.ofNullable(params.getList()).orElse(Collections.emptyList());
+		if (list.isEmpty()) return;
+
+		Map<String, ProcAllocation> paMap = this.listByIds(
+						list.stream().map(SingleProcAllocReq::getId).collect(Collectors.toList()))
+				.stream().collect(Collectors.toMap(ProcAllocation::getId, Function.identity()));
+
+		for (SingleProcAllocReq req : list) {
+			ProcAllocation pa = paMap.get(req.getId());
+			BigDecimal current = Optional.ofNullable(pa.getWorkerAllocCount()).orElse(BigDecimal.ZERO);
+			BigDecimal remain = pa.getTotalCount().subtract(current);
+
+			// 【新增】校验追加量不能超过剩余量
+			if (req.getAllocCount().compareTo(remain) > 0) {
+				throw new CavException("追加数量超过剩余可分配数量!");
+			}
+
+			BigDecimal newCount = current.add(req.getAllocCount());
+			pa.setWorkerAllocCount(newCount);
+			pa.setDeviceId(req.getDeviceId());
+			pa.setUpdatedTime(LocalDateTime.now());
+			this.updateById(pa);
+
+			WorkOrder wo = workOrderService.getById(req.getWorkOrderId());
+			wo.setPlanTotalCount(newCount);
+			wo.setDeviceId(req.getDeviceId());
+			wo.setGroupId(params.getGroupId());
+			wo.setShiftType(params.getShiftType());
+			wo.setUpdatedTime(LocalDateTime.now());
+			workOrderService.updateById(wo);
+
+			WorkOrderRecord record = new WorkOrderRecord();
+			record.setId(IdUtil.simpleUUID());
+			record.setWorkOrderId(wo.getId());
+			record.setItemCount(req.getAllocCount()); // 【新增】记录增量
+			record.setCreatedTime(LocalDateTime.now());
+			record.setUpdatedTime(LocalDateTime.now());
+			workOrderRecordService.save(record);
+		}
+	}
+
+
+/////////////////////////////////////////////////////////////////////////////
+
 
 	//    批量工单下达    补丁设置09状态
 	@Override
@@ -308,7 +434,7 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
 
 	// 工序分配数量（全量+最佳 合并）
 	@Transactional(rollbackFor = Throwable.class)
-	public void saveWorkOrderNew(BatchProcAllocReq params, boolean append) {
+	public void saveWorkOrderNew1(BatchProcAllocReq params, boolean append) {
 		// 1. 读取请求参数
 		List<SingleProcAllocReq> reqList = Optional
 				.ofNullable(params.getList())
