@@ -106,29 +106,36 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
 	private OrderDtlService orderDtlService;
 
 	/////////////////////////////////////////////////////////////////////////////
+
+//	说明：首次分配是否全量：通过比较 allocCount 与剩余可分配数量，并确保当前已分配为 0，来判定是否全量。
+//	后续分配：只要工序已存在分配记录（已分配数量 > 0），无论追加全部或部分，均按增量处理，并强制要求携带合法的 workOrderId。
+
+	// 创建
 	@Transactional(rollbackFor = Throwable.class)
 	public void createWorkOrderNew(BatchProcAllocReq params) {
 		List<SingleProcAllocReq> list = params.getList();
 		List<String> ids = list.stream().map(SingleProcAllocReq::getId).collect(Collectors.toList());
-		Map<String, ProcAllocation> map = this.listByIds(ids).stream()
-				.collect(Collectors.toMap(ProcAllocation::getId, Function.identity()));
+		Map<String, ProcAllocation> map = this.listByIds(ids)
+				.stream().collect(Collectors.toMap(ProcAllocation::getId, Function.identity()));
 
-		// 【新增】判定：若所有明细分配量都等于总量 ⇒ 全量；否则视为增量
-		boolean full = list.stream().allMatch(req -> {
+		// 1. 判断是否“首次全量”
+		//    条件：① 当前已分配数量 == 0（首次）；② 本次分配量 == 剩余可分配量
+		boolean isFull = list.stream().allMatch(req -> {
 			ProcAllocation pa = map.get(req.getId());
-			return req.getAllocCount().compareTo(pa.getTotalCount()) == 0;
+			BigDecimal allocated = Optional.ofNullable(pa.getWorkerAllocCount()).orElse(BigDecimal.ZERO);
+			BigDecimal remain = pa.getTotalCount().subtract(allocated);
+			return allocated.compareTo(BigDecimal.ZERO) == 0
+					&& req.getAllocCount().compareTo(remain) == 0;
 		});
 
-		if (full) {
-			// 【新增】全量分配：走 saveWorkOrder
+		if (isFull) {
+			// 2.a 首次且全量 → 走全量处理逻辑
 			saveWorkOrderNew(params.getShiftType(), params.getGroupId(), list, map);
-			this.updateBatchById(map.values());   // 【新增】批量更新
+			this.updateBatchById(map.values());   // 批量更新工序分配
 		} else {
-			// 【新增】增量追加：走 saveWorkOrderNew
+			// 2.b 非首次或部分分配 → 增量追加，需携带 workOrderId
 			saveWorkOrderNew(params);
 		}
-
-		// 订单状态处理逻辑保持不变……
 	}
 
 
@@ -182,8 +189,10 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
 		workOrderService.saveBatch(woList);  // 【修改】仅保存新增工单
 	}
 
+
 	/**
 	 * 增量分配：在已有工单上追加分配量
+	 * 注意：必须提供有效的 workOrderId
 	 */
 	private void saveWorkOrderNew(BatchProcAllocReq params) {
 		List<SingleProcAllocReq> list =
@@ -195,11 +204,18 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
 				.stream().collect(Collectors.toMap(ProcAllocation::getId, Function.identity()));
 
 		for (SingleProcAllocReq req : list) {
+			if (StringUtils.isBlank(req.getWorkOrderId())) {
+				throw new CavException("增量分配必须提供有效的 workOrderId");
+			}
+			WorkOrder wo = workOrderService.getById(req.getWorkOrderId());
+			if (wo == null) {
+				throw new CavException("未找到对应的工单：" + req.getWorkOrderId());
+			}
+
 			ProcAllocation pa = paMap.get(req.getId());
 			BigDecimal current = Optional.ofNullable(pa.getWorkerAllocCount()).orElse(BigDecimal.ZERO);
 			BigDecimal remain = pa.getTotalCount().subtract(current);
 
-			// 【新增】校验追加量不能超过剩余量
 			if (req.getAllocCount().compareTo(remain) > 0) {
 				throw new CavException("追加数量超过剩余可分配数量!");
 			}
@@ -210,7 +226,6 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
 			pa.setUpdatedTime(LocalDateTime.now());
 			this.updateById(pa);
 
-			WorkOrder wo = workOrderService.getById(req.getWorkOrderId());
 			wo.setPlanTotalCount(newCount);
 			wo.setDeviceId(req.getDeviceId());
 			wo.setGroupId(params.getGroupId());
@@ -221,7 +236,7 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
 			WorkOrderRecord record = new WorkOrderRecord();
 			record.setId(IdUtil.simpleUUID());
 			record.setWorkOrderId(wo.getId());
-			record.setItemCount(req.getAllocCount()); // 【新增】记录增量
+			record.setItemCount(req.getAllocCount()); // 记录本次增量
 			record.setCreatedTime(LocalDateTime.now());
 			record.setUpdatedTime(LocalDateTime.now());
 			workOrderRecordService.save(record);
