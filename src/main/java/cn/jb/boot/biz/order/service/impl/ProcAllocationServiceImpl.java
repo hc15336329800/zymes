@@ -1,5 +1,6 @@
 package cn.jb.boot.biz.order.service.impl;
 
+import cn.hutool.core.util.IdUtil;
 import cn.jb.boot.biz.order.entity.ProcAllocation;
 import cn.jb.boot.biz.order.mapper.ProcAllocationMapper;
 import cn.jb.boot.biz.order.service.OrderDtlService;
@@ -34,6 +35,7 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
 
 
 /**
@@ -118,7 +120,8 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
 		Map<String, ProcAllocation> map = pas.stream().collect(Collectors.toMap(ProcAllocation::getId,
 				Function.identity()));
 		// 5. 保存工单（工序）核心逻辑（shiftType为班次类型,GroupId班组，list为本次分配明细，map为历史数据）
-		saveWorkOrder(params.getShiftType(), params.getGroupId(), list, map);
+//		saveWorkOrder(params.getShiftType(), params.getGroupId(), list, map);
+		saveWorkOrderNew(params.getShiftType(), params.getGroupId(), list, map);
 		// 6. 批量更新工序分配记录
 		this.updateBatchById(pas);
 
@@ -154,52 +157,6 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
 
 	}
 
-
-	//    批量工单下达   bug 不设置09状态
-	@Transactional(rollbackFor = Throwable.class)
-	public void createWorkOrder01(BatchProcAllocReq params) {
-		// 1. 获取批量分配请求里的明细列表
-		List<SingleProcAllocReq> list = params.getList();
-		// 2. 收集明细里的主键id
-		List<String> ids = list.stream().map(SingleProcAllocReq::getId).collect(Collectors.toList());
-		// 3. 根据id批量查出已有的工序分配记录
-		List<ProcAllocation> pas = this.listByIds(ids);
-		// 4. 把查到的工序分配列表转为map，key为id，value为分配对象，便于后续处理
-		Map<String, ProcAllocation> map = pas.stream().collect(Collectors.toMap(ProcAllocation::getId,
-				Function.identity()));
-		// 5. 保存工单（工序）核心逻辑（shiftType为班次类型,GroupId班组，list为本次分配明细，map为历史数据）
-		saveWorkOrder(params.getShiftType(), params.getGroupId(), list, map);
-		// 6. 批量更新工序分配记录
-		this.updateBatchById(pas);
-
-// —— todo：下发完成后，检查每个 orderDtlId，若该子件下所有工序已分配，则改状态为09
-		List<String> detailIds = pas.stream()
-				.map(ProcAllocation::getOrderDtlId)
-				.distinct()
-				.collect(Collectors.toList());
-		for (String detailId : detailIds) {
-			// 查询该明细下的所有工序分配记录
-			List<ProcAllocation> allPas = this.list(
-					new LambdaQueryWrapper<ProcAllocation>()
-							.eq(ProcAllocation::getOrderDtlId, detailId)
-			);
-			// 判断是否全部已分配（工厂+外协 >= 总数）
-			boolean allScheduled = allPas.stream().allMatch(pa ->
-					pa.getWorkerAllocCount()
-							.add(pa.getOuterAllocCount())
-							.compareTo(pa.getTotalCount()) >= 0
-			);
-			if (allScheduled) {
-				// 构建更新请求
-				OrderDtlUpdateStatusRequest req = new OrderDtlUpdateStatusRequest();
-				req.setId(detailId);
-				req.setOrderDtlStatus("09");//更新状态为“已排产”
-				// 调用服务更新状态为“已排产”
-				orderDtlService.updateStatus(req);
-			}
-		}
-
-	}
 
 	@Override
 	@Transactional(rollbackFor = Throwable.class)
@@ -258,6 +215,7 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
 	}
 
 
+	// 工序分配数量（全量 ）
 	private void saveWorkOrder(String shiftType, String groupId, List<SingleProcAllocReq> list, Map<String,
 			ProcAllocation> map) {
 		List<String> woIds = list.stream().map(SingleProcAllocReq::getWorkOrderId).collect(Collectors.toList());
@@ -345,6 +303,80 @@ public class ProcAllocationServiceImpl extends ServiceImpl<ProcAllocationMapper,
 		}
 		workOrderService.saveOrUpdateBatch(woList);
 
+	}
+
+
+
+	// 工序分配数量（全量+最佳 合并）
+	@Transactional(rollbackFor = Throwable.class)
+	public void saveWorkOrderNew(BatchProcAllocReq params, boolean append) {
+		// 1. 读取请求参数
+		List<SingleProcAllocReq> reqList = Optional
+				.ofNullable(params.getList())
+				.orElse(Collections.emptyList());
+		if (reqList.isEmpty()) {
+			return;
+		}
+
+		List<SingleProcAllocReq> list = reqList;
+
+		// 2. 若为追加模式，将“增量”转换为新的累计值
+		if (append) {
+			List<String> ids = list.stream()
+					.map(SingleProcAllocReq::getId)
+					.collect(Collectors.toList());
+			List<ProcAllocation> pas = this.listByIds(ids);
+			Map<String, ProcAllocation> paMap = pas.stream()
+					.collect(Collectors.toMap(ProcAllocation::getId, Function.identity()));
+
+			list = list.stream().map(req -> {
+				ProcAllocation pa = paMap.get(req.getId());
+				BigDecimal current = Optional.ofNullable(pa.getWorkerAllocCount())
+						.orElse(BigDecimal.ZERO);
+				BigDecimal remain = pa.getTotalCount().subtract(current);
+				if (req.getAllocCount().compareTo(remain) > 0) {
+					throw new CavException("追加数量超过剩余可分配数量!");
+				}
+				SingleProcAllocReq copy = new SingleProcAllocReq();
+				PojoUtil.copyBean(req, copy);
+				copy.setAllocCount(current.add(req.getAllocCount()));
+				return copy;
+			}).collect(Collectors.toList());
+		}
+
+		// 3. 保存/更新工序分配与工单
+		for (SingleProcAllocReq req : list) {
+			ProcAllocation pa = this.getById(req.getId());
+			BigDecimal before = Optional.ofNullable(pa.getWorkerAllocCount())
+					.orElse(BigDecimal.ZERO);
+			BigDecimal newCount = req.getAllocCount();
+			pa.setWorkerAllocCount(newCount);
+			pa.setDeviceId(req.getDeviceId());
+//			pa.setUpdatedBy(SecurityUtil.getUserId());
+			pa.setUpdatedTime(LocalDateTime.now());
+			this.updateById(pa);
+
+			WorkOrder wo = workOrderService.getById(req.getWorkOrderId());
+			wo.setPlanTotalCount(newCount);
+			wo.setDeviceId(req.getDeviceId());
+			wo.setGroupId(params.getGroupId());
+			wo.setShiftType(params.getShiftType());
+//			wo.setUpdatedBy(SecurityUtil.getUserId());
+			wo.setUpdatedTime(LocalDateTime.now());
+			workOrderService.updateById(wo);
+
+			// 4. 记录工单分配增量
+			WorkOrderRecord record = new WorkOrderRecord();
+			record.setId(IdUtil.simpleUUID());
+			record.setWorkOrderId(wo.getId());
+			BigDecimal delta = append ? newCount.subtract(before) : newCount;
+			record.setItemCount(delta);
+//			record.setCreatedBy(SecurityUtil.getUserId());
+			record.setCreatedTime(LocalDateTime.now());
+//			record.setUpdatedBy(SecurityUtil.getUserId());
+			record.setUpdatedTime(LocalDateTime.now());
+			workOrderRecordService.save(record);
+		}
 	}
 
 
