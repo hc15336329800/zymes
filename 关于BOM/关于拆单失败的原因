@@ -1,0 +1,37 @@
+
+问题描述：
+---------------------------------------------
+你看接口：  http://localhost:9527/local_api/api/item/mes_item_use/item_use_tree_new   结构正常啊  为什么在http://localhost:9527/local_api/api/production/production_order/start_scheduled 中会失败》？？
+
+   返回的数据： {
+    "tx_code": "00",
+    "page": null,
+    "error_info": null,
+    "data": {
+        "itemNo": "600656",
+        "itemName": "中间斜板(2523003048)",
+        "parentCode": "600656",
+        "usedId": null,
+        "children": [
+            {
+                "itemNo": "400391",
+                "itemName": "钢板Q355B(400391)",
+                "parentCode": "600656",
+                "usedId": "0833197bc9ff488cb7106742f5d389cf",
+                "children": [],
+                "fixedUsed": "65.17",
+                "bomNo": "",
+                "itemType": "00"
+            }
+        ],
+        "fixedUsed": "1",
+        "bomNo": "2523003048",
+        "itemType": "01"
+    }
+}
+
+
+
+-----------------------------------
+
+原因：   这个bom下面没有子bom  !!!!

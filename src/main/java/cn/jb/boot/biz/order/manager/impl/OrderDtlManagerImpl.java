@@ -69,7 +69,8 @@ public class OrderDtlManagerImpl implements OrderDtlManager {
                     //更新订单生产量
                     BigDecimal prdCount = ArithUtil.add(reportCount, dtl.getProductionCount());
                     dtl.setProductionCount(prdCount);
-                    if(dtl.getItemCount().equals(prdCount)){
+                    // 计划数量 == 已生产数量 → 设置状态为完成("08")
+                    if (dtl.getItemCount().compareTo(prdCount) == 0) {
                         dtl.setOrderDtlStatus("08");
                     }
                     orderDtlMapper.updateById(dtl);
